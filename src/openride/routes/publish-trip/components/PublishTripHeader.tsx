@@ -1,12 +1,15 @@
-import { DashboardTopBar } from "@/openride/shared/layouts";
+import { DashboardTopBar, DashboardTopBarActionGroup } from "@/openride/shared/layouts";
 
 const PublishTripHeader = () => (
   <DashboardTopBar
+    subtitle="Préparez votre annonce et vérifiez les détails avant publication."
     title="Publier un Trajet"
     actions={
-      <button className="text-sm font-medium text-brand-textMuted hover:text-white transition-colors px-4 py-2 border border-gray-700 rounded-lg hover:bg-gray-800">
-        Sauvegarder Brouillon
-      </button>
+      <DashboardTopBarActionGroup searchPlaceholder="Rechercher une ville...">
+        <button className="rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-brand-textMuted transition-colors hover:bg-gray-800 hover:text-white">
+          Sauvegarder Brouillon
+        </button>
+      </DashboardTopBarActionGroup>
     }
   />
 );

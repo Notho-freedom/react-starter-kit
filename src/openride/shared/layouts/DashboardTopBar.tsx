@@ -30,6 +30,15 @@ type DashboardTopBarProfileChipProps = {
   subtitle: string;
 };
 
+type DashboardTopBarActionGroupProps = {
+  children?: ReactNode;
+  profileName?: string;
+  profileSubtitle?: string;
+  searchPlaceholder?: string;
+  searchShortcut?: string;
+  searchWidthClassName?: string;
+};
+
 export function DashboardTopBar({
   actions,
   leading,
@@ -60,7 +69,7 @@ export function DashboardTopBar({
         </div>
       </div>
 
-      {actions ? <div className="ml-4 flex items-center gap-4">{actions}</div> : null}
+      {actions ? <div className="ml-4 flex min-w-0 items-center gap-4">{actions}</div> : null}
     </header>
   );
 }
@@ -140,6 +149,42 @@ export function DashboardTopBarProfileChip({
         </div>
       </div>
       <OpenRideIcon name="chevron-down" className="text-xs text-gray-500" />
+    </div>
+  );
+}
+
+export function DashboardTopBarActionGroup({
+  children,
+  profileName = "Ronald R.",
+  profileSubtitle = "Membre depuis 2023",
+  searchPlaceholder,
+  searchShortcut,
+  searchWidthClassName,
+}: DashboardTopBarActionGroupProps) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      {searchPlaceholder ? (
+        <DashboardTopBarSearch
+          placeholder={searchPlaceholder}
+          shortcut={searchShortcut}
+          widthClassName={searchWidthClassName}
+        />
+      ) : null}
+
+      {children ? <div className="hidden items-center gap-2 lg:flex">{children}</div> : null}
+
+      <div className="flex items-center gap-2">
+        <DashboardTopBarIconButton>
+          <OpenRideIcon name="moon" className="text-sm" />
+        </DashboardTopBarIconButton>
+
+        <button className="relative flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-brand-surface px-3 text-gray-400 transition-colors hover:text-white" type="button">
+          <OpenRideIcon name="bell" className="text-sm" />
+          <span className="rounded-full bg-brand-error px-1.5 text-[10px] text-white">2 New</span>
+        </button>
+      </div>
+
+      <DashboardTopBarProfileChip name={profileName} subtitle={profileSubtitle} />
     </div>
   );
 }
