@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { AuthShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import {
   handleOpenRideRouteClick,
@@ -6,14 +7,14 @@ import {
   preventHashAnchor,
 } from "@/openride/shared/navigation";
 import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
-import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useUpdateProfile } from "@/integrations/supabase/hooks";
 import { TrustCenterContentPanel, TrustCenterVisualPanel } from "./components";
 
 const trustThemeId: OpenRideFixedThemeId = "trust-dark";
 
 const TrustCenterPage = () => {
   const navigate = useNavigate();
-  const workflow = useOpenRideWorkflow();
+  const updateProfile = useUpdateProfile();
 
   return (
     <OpenRidePageFrame
@@ -37,8 +38,16 @@ const TrustCenterPage = () => {
 
         if (action === "complete") {
           event.preventDefault();
-          workflow.completeTrustCenter();
-          navigate("/search-results");
+          updateProfile.mutate(
+            { email_verified: true, phone_verified: true },
+            {
+              onSuccess: () => {
+                toast.success("Vérification complétée !");
+                navigate("/search-results");
+              },
+              onError: (err) => toast.error(err.message || "Erreur"),
+            }
+          );
         }
       }}
       onSubmitCapture={preventDefaultSubmit}
