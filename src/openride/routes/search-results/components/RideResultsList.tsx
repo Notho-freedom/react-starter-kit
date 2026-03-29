@@ -10,7 +10,7 @@ function RideResultsList() {
     <div className="w-full lg:w-5/12 xl:w-1/2 overflow-y-auto hide-scroll p-4 md:p-6 flex flex-col gap-4">
       <p className="text-sm text-gray-400 mb-2">{workflow.searchRides.length} rides available</p>
 
-      {workflow.searchRides.map((ride, index) => {
+      {workflow.searchRides.map((ride) => {
         const isSelected = workflow.selectedRide?.id === ride.id;
 
         return (
@@ -102,19 +102,17 @@ function RideResultsList() {
                 </div>
               </div>
 
-              {index === 0 ? (
-                <button
-                  type="button"
-                  className="bg-brand-purple hover:bg-brand-purpleLight text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shadow-lg shadow-brand-purple/20"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    workflow.setSelectedRide(ride.id);
-                    navigate("/trip-details");
-                  }}
-                >
-                  View Details
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className="bg-brand-purple hover:bg-brand-purpleLight text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shadow-lg shadow-brand-purple/20"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  workflow.setSelectedRide(ride.id);
+                  navigate("/trip-details");
+                }}
+              >
+                View Details
+              </button>
             </div>
           </div>
         );

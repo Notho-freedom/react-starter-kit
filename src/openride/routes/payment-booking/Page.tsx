@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { handleOpenRideRouteClick, preventDefaultSubmit } from "@/openride/shared/navigation";
+import { type PaymentMethodId, useOpenRideWorkflow } from "@/openride/shared/workflows";
 import { PaymentBookingContent, PaymentBookingHeader } from "./components";
 import BookingSuccessModal from "./components/BookingSuccessModal";
 
@@ -12,6 +13,7 @@ const PaymentBookingPage = () => {
   const [paymentMethod, setPaymentMethod] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const workflow = useOpenRideWorkflow();
 
   useEffect(() => {
     return () => {
@@ -60,6 +62,18 @@ const PaymentBookingPage = () => {
         }
 
         const target = event.target as HTMLElement | null;
+        const bookingAction =
+          target?.closest<HTMLElement>("[data-openride-booking-action]")?.dataset.openrideBookingAction;
+
+        if (bookingAction === "message") {
+          event.preventDefault();
+          if (workflow.selectedRide) {
+            workflow.openConversationForRide(workflow.selectedRide.id);
+          }
+          navigate("/messages");
+          return;
+        }
+
         const paymentLabel = target?.closest<HTMLLabelElement>("label");
         const paymentInput =
           paymentLabel?.querySelector<HTMLInputElement>('input[name="payment"]') ??
@@ -79,6 +93,28 @@ const PaymentBookingPage = () => {
           return;
         }
 
+        const seatControls = target?.closest<HTMLElement>("[data-openride-seat-control]");
+        const seatControl =
+          seatControls?.dataset.openrideSeatControl ??
+          (target?.closest("button")?.textContent?.includes("+")
+            ? "increment"
+            : target?.closest("button")?.textContent?.includes("−")
+              ? "decrement"
+              : null);
+
+        if (seatControl === "increment" || seatControl === "decrement") {
+          event.preventDefault();
+          const currentSeats = Math.max(workflow.bookingDraft.seatCount, 1);
+          const maxSeats = Math.max(workflow.selectedRide?.seatsLeft ?? currentSeats, 1);
+          const nextSeatCount =
+            seatControl === "increment"
+              ? Math.min(currentSeats + 1, maxSeats)
+              : Math.max(currentSeats - 1, 1);
+
+          workflow.updateBookingDraft({ seatCount: nextSeatCount });
+          return;
+        }
+
         const confirmButton = target?.closest<HTMLElement>("#confirm-btn");
         if (!confirmButton || isProcessing) {
           return;
@@ -92,6 +128,35 @@ const PaymentBookingPage = () => {
         }
 
         timeoutRef.current = window.setTimeout(() => {
+          const paymentValues: PaymentMethodId[] = ["card", "wallet", "paypal"];
+          const readFieldValue = (name: string) => {
+            const field = rootRef.current?.querySelector<
+              HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+            >(`[name="${name}"]`);
+
+            if (!field) {
+              return "";
+            }
+
+            if (field instanceof HTMLInputElement && field.type === "checkbox") {
+              return field.checked ? "true" : "";
+            }
+
+            return field.value;
+          };
+          const selectedPayment =
+            rootRef.current?.querySelector<HTMLInputElement>('input[name="payment"]:checked')
+              ?.value as PaymentMethodId | undefined;
+
+          workflow.completeBooking({
+            email: readFieldValue("email").trim() || workflow.user?.email || "",
+            firstName: readFieldValue("firstName").trim() || workflow.user?.firstName || "",
+            lastName: readFieldValue("lastName").trim() || workflow.user?.lastName || "",
+            message: readFieldValue("message").trim(),
+            paymentMethod: selectedPayment ?? paymentValues[paymentMethod] ?? "card",
+            phone: readFieldValue("phone").trim() || workflow.user?.phone || "",
+            seatCount: workflow.bookingDraft.seatCount,
+          });
           setIsProcessing(false);
           setShowSuccess(true);
         }, 1500);

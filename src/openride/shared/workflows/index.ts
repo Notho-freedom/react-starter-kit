@@ -9,7 +9,7 @@ export {
   ProtectedRoute,
   PublicEntryRoute,
 } from "./guards";
-export { openRideWorkflowStorageKey } from "./seed";
+export { createInitialWorkflowState, openRideWorkflowStorageKey } from "./seed";
 export type {
   AuthStatus,
   AuthVariant,

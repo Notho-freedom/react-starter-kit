@@ -1,7 +1,11 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
+import { useOpenRideWorkflow } from "@/openride/shared/workflows";
 
-const PublishTripFormSections = () => (
-  <>
+const PublishTripFormSections = () => {
+  const workflow = useOpenRideWorkflow();
+  const draft = workflow.publishDraft;
+
+  return (
     <div className="lg:col-span-8 flex flex-col gap-8">
         {/* Route Section */}
         <section id="route-section" className="glass-card rounded-3xl p-6 md:p-8">
@@ -20,7 +24,7 @@ const PublishTripFormSections = () => (
                 <label className="block text-sm font-medium text-brand-textMuted mb-2">Départ</label>
                 <div className="relative">
                   <OpenRideIcon name="location-dot" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" className="w-full input-field rounded-xl pl-10 pr-4 py-3" placeholder="Ville de départ (ex: Paris)" />
+                  <input name="departure" type="text" defaultValue={draft.departure} className="w-full input-field rounded-xl pl-10 pr-4 py-3" placeholder="Ville de départ (ex: Paris)" />
                 </div>
               </div>
             </div>
@@ -39,7 +43,7 @@ const PublishTripFormSections = () => (
                 <label className="block text-sm font-medium text-brand-textMuted mb-2">Arrivée</label>
                 <div className="relative">
                   <OpenRideIcon name="location-dot" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" className="w-full input-field rounded-xl pl-10 pr-4 py-3" placeholder="Ville d'arrivée (ex: Lyon)" />
+                <input name="destination" type="text" defaultValue={draft.destination} className="w-full input-field rounded-xl pl-10 pr-4 py-3" placeholder="Ville d'arrivée (ex: Lyon)" />
                 </div>
               </div>
             </div>
@@ -55,14 +59,14 @@ const PublishTripFormSections = () => (
               <label className="block text-sm font-medium text-brand-textMuted mb-2">Date de départ</label>
               <div className="relative">
                 <OpenRideIcon name="calendar" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="date" className="w-full input-field rounded-xl pl-10 pr-4 py-3 text-white [color-scheme:dark]" />
+                <input name="date" type="date" defaultValue={draft.date} className="w-full input-field rounded-xl pl-10 pr-4 py-3 text-white [color-scheme:dark]" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-brand-textMuted mb-2">Heure de départ</label>
               <div className="relative">
                 <OpenRideIcon name="clock" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="time" className="w-full input-field rounded-xl pl-10 pr-4 py-3 text-white [color-scheme:dark]" />
+                <input name="time" type="time" defaultValue={draft.time} className="w-full input-field rounded-xl pl-10 pr-4 py-3 text-white [color-scheme:dark]" />
               </div>
             </div>
           </div>
@@ -77,11 +81,11 @@ const PublishTripFormSections = () => (
             <div>
               <label className="block text-sm font-medium text-brand-textMuted mb-4">Places disponibles</label>
               <div className="flex items-center gap-4 bg-brand-surface rounded-xl p-2 border border-gray-700 w-fit">
-                <button className="w-10 h-10 rounded-lg flex items-center justify-center text-brand-textMuted hover:text-white hover:bg-gray-700 transition-colors">
+                <button data-openride-publish-seat="decrement" className="w-10 h-10 rounded-lg flex items-center justify-center text-brand-textMuted hover:text-white hover:bg-gray-700 transition-colors">
                   <OpenRideIcon name="minus" />
                 </button>
-                <span className="text-white font-bold text-xl w-8 text-center">3</span>
-                <button className="w-10 h-10 rounded-lg flex items-center justify-center text-brand-textMuted hover:text-white hover:bg-gray-700 transition-colors">
+                <span className="text-white font-bold text-xl w-8 text-center">{draft.seats}</span>
+                <button data-openride-publish-seat="increment" className="w-10 h-10 rounded-lg flex items-center justify-center text-brand-textMuted hover:text-white hover:bg-gray-700 transition-colors">
                   <OpenRideIcon name="plus" />
                 </button>
               </div>
@@ -92,7 +96,7 @@ const PublishTripFormSections = () => (
               <label className="block text-sm font-medium text-brand-textMuted mb-4">Prix par place</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white font-bold text-lg">€</span>
-                <input type="number" className="w-full input-field rounded-xl pl-8 pr-4 py-3 text-lg font-bold" defaultValue={35.00} step="0.50" />
+                <input name="price" type="number" className="w-full input-field rounded-xl pl-8 pr-4 py-3 text-lg font-bold" defaultValue={draft.price} step="0.50" />
               </div>
               <div className="mt-3 flex items-start gap-2 text-xs text-brand-accentYellow bg-brand-accentYellow/10 p-3 rounded-lg border border-brand-accentYellow/20">
                 <OpenRideIcon name="lightbulb" className="mt-0.5" />
@@ -114,7 +118,7 @@ const PublishTripFormSections = () => (
                 <div className="absolute top-0 right-0 bg-brand-accentGreen text-brand-dark text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl">ACTUEL</div>
                 <input type="radio" name="vehicle" className="custom-radio" defaultChecked />
                 <div>
-                  <p className="text-white font-medium">Peugeot 3008</p>
+                  <p className="text-white font-medium">{draft.vehicleName}</p>
                   <p className="text-sm text-brand-textMuted">Gris • AB-123-CD</p>
                 </div>
               </label>
@@ -133,7 +137,7 @@ const PublishTripFormSections = () => (
                   <span className="text-white font-medium">Fumeur autorisé</span>
                 </div>
                 <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                  <input type="checkbox" name="toggle" id="toggle-smoking" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out border-gray-600" />
+                  <input type="checkbox" name="smokingAllowed" id="toggle-smoking" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out border-gray-600" defaultChecked={draft.smokingAllowed} />
                   <label htmlFor="toggle-smoking" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-600 cursor-pointer transition-colors duration-200 ease-in-out" />
                 </div>
               </div>
@@ -143,7 +147,7 @@ const PublishTripFormSections = () => (
                   <span className="text-white font-medium">Animaux acceptés</span>
                 </div>
                 <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                  <input type="checkbox" name="toggle" id="toggle-pets" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out border-gray-600" />
+                  <input type="checkbox" name="petsAllowed" id="toggle-pets" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out border-gray-600" defaultChecked={draft.petsAllowed} />
                   <label htmlFor="toggle-pets" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-600 cursor-pointer transition-colors duration-200 ease-in-out" />
                 </div>
               </div>
@@ -153,7 +157,7 @@ const PublishTripFormSections = () => (
                   <span className="text-white font-medium">Gros bagages</span>
                 </div>
                 <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                  <input type="checkbox" name="toggle" id="toggle-luggage" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out border-gray-600" defaultChecked />
+                  <input type="checkbox" name="luggageAllowed" id="toggle-luggage" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out border-gray-600" defaultChecked={draft.luggageAllowed} />
                   <label htmlFor="toggle-luggage" className="toggle-label block overflow-hidden h-6 rounded-full bg-brand-accentGreen cursor-pointer transition-colors duration-200 ease-in-out" />
                 </div>
               </div>
@@ -167,11 +171,11 @@ const PublishTripFormSections = () => (
           </h2>
           <div>
             <label className="block text-sm font-medium text-brand-textMuted mb-2">Instructions de point de rendez-vous (Optionnel)</label>
-            <textarea className="w-full input-field rounded-xl px-4 py-3 h-24 resize-none" placeholder="Précisez le lieu exact de rendez-vous (ex: Devant la gare, côté sud...)" defaultValue={""} />
+            <textarea name="instructions" className="w-full input-field rounded-xl px-4 py-3 h-24 resize-none" placeholder="Précisez le lieu exact de rendez-vous (ex: Devant la gare, côté sud...)" defaultValue={draft.instructions} />
           </div>
         </section>
       </div>
-  </>
-);
+  );
+};
 
 export default PublishTripFormSections;

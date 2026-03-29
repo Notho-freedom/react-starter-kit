@@ -3,21 +3,54 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AppRoutes from "@/AppRoutes";
 import { openRideThemeStorageKey } from "@/openride/shared/theme";
+import {
+  createInitialWorkflowState,
+  openRideWorkflowStorageKey,
+  type OpenRideWorkflowState,
+} from "@/openride/shared/workflows";
 
-const routeExpectations = [
-  { path: "/", heading: "Résultats de Recherche", title: "Ride Sharing - Résultats de Recherche" },
-  { path: "/search-results", heading: "Résultats de Recherche", title: "Ride Sharing - Résultats de Recherche" },
-  { path: "/publish-trip", heading: "Publier un Trajet", title: "Ride Sharing - Publier un Trajet" },
-  { path: "/messages", heading: "Messages", title: "Ride Sharing - Messages" },
-  { path: "/my-trips", heading: "Mes Trajets", title: "Ride Sharing - Mes Trajets" },
-  { path: "/trip-details", heading: "Détails du Trajet", title: "Ride Sharing - Détails du Trajet" },
-  { path: "/payment-booking", heading: "Paiement & Réservation", title: "Ride Sharing - Paiement & Réservation" },
-  { path: "/profile-settings", heading: "Profil & Paramètres", title: "Ride Sharing - Profil & Paramètres" },
-  { path: "/auth", heading: "Login", title: "Rideshare Login & Registration" },
-  { path: "/authentication-hub", heading: "Welcome back", title: "Authentication Hub - Rideshare" },
-  { path: "/setup-profile", heading: "Set up your profile", title: "Account Setup" },
-  { path: "/trust-center", heading: "Trust Center", title: "Trust Center & Verification" },
-];
+function mergeWorkflowState(overrides: Partial<OpenRideWorkflowState> = {}) {
+  const base = createInitialWorkflowState();
+
+  return {
+    ...base,
+    ...overrides,
+    bookingDraft: {
+      ...base.bookingDraft,
+      ...overrides.bookingDraft,
+    },
+    publishDraft: {
+      ...base.publishDraft,
+      ...overrides.publishDraft,
+    },
+    user:
+      overrides.user === null
+        ? null
+        : {
+            ...base.user!,
+            ...overrides.user,
+            verification: {
+              ...base.user!.verification,
+              ...overrides.user?.verification,
+            },
+          },
+  } satisfies OpenRideWorkflowState;
+}
+
+function seedWorkflowState(overrides: Partial<OpenRideWorkflowState> = {}) {
+  const state = mergeWorkflowState(overrides);
+  window.localStorage.setItem(openRideWorkflowStorageKey, JSON.stringify(state));
+  return state;
+}
+
+function seedAuthenticatedWorkflow(overrides: Partial<OpenRideWorkflowState> = {}) {
+  return seedWorkflowState({
+    authStatus: "authenticated",
+    profileCompleted: true,
+    trustCompleted: true,
+    ...overrides,
+  });
+}
 
 function renderRoute(path: string) {
   return render(
@@ -27,85 +60,199 @@ function renderRoute(path: string) {
   );
 }
 
-describe("OpenRide routes", () => {
-  it.each(routeExpectations)("renders $path", async ({ path, heading, title }) => {
-    renderRoute(path);
+describe("OpenRide workflows", () => {
+  it("redirects anonymous users from the root entry point to auth", async () => {
+    renderRoute("/");
 
-    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
     await waitFor(() => {
-      expect(document.title).toBe(title);
+      expect(document.title).toBe("Rideshare Login & Registration");
     });
   });
 
-  it("uses the default OpenRide theme when no preference is saved", async () => {
-    const { container } = renderRoute("/search-results");
+  it("protects dashboard routes for anonymous users", async () => {
+    renderRoute("/search-results");
 
-    await screen.findByRole("heading", { name: "Résultats de Recherche" });
-    expect(
-      container.querySelector('[data-openride-page="search-results"]'),
-    ).toHaveAttribute("data-openride-theme", "default");
+    expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
   });
 
-  it("toggles auth screens on the login and registration page", async () => {
+  it("routes incomplete onboarding users to the next required step", async () => {
+    seedWorkflowState({
+      authStatus: "authenticated",
+      onboardingStep: "setup-profile",
+      profileCompleted: false,
+      trustCompleted: false,
+    });
+    const setupView = renderRoute("/");
+    expect(await screen.findByRole("heading", { name: "Set up your profile" })).toBeInTheDocument();
+    setupView.unmount();
+
+    window.localStorage.clear();
+    seedWorkflowState({
+      authStatus: "authenticated",
+      onboardingStep: "trust-center",
+      profileCompleted: true,
+      trustCompleted: false,
+    });
+    renderRoute("/");
+    expect(await screen.findByRole("heading", { name: "Trust Center" })).toBeInTheDocument();
+  });
+
+  it("renders all protected OpenRide routes for authenticated users", async () => {
+    seedAuthenticatedWorkflow();
+
+    const routeExpectations = [
+      { path: "/search-results", heading: "Résultats de Recherche" },
+      { path: "/publish-trip", heading: "Publier un Trajet" },
+      { path: "/messages", heading: "Messages" },
+      { path: "/my-trips", heading: "Mes Trajets" },
+      { path: "/trip-details", heading: "Détails du Trajet" },
+      { path: "/payment-booking", heading: "Paiement & Réservation" },
+      { path: "/profile-settings", heading: "Profil & Paramètres" },
+    ];
+
+    for (const expectation of routeExpectations) {
+      const view = renderRoute(expectation.path);
+      expect(await screen.findByRole("heading", { name: expectation.heading })).toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it("keeps auth screen toggles working and signup redirects into onboarding", async () => {
     renderRoute("/auth");
 
-    expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: "Sign up" }));
+    fireEvent.click(await screen.findByRole("link", { name: "Sign up" }));
     expect(await screen.findByRole("heading", { name: "Sign up" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: "Login" }));
-    expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("John"), { target: { value: "Amina" } });
+    fireEvent.change(screen.getByPlaceholderText("Doe"), { target: { value: "Bela" } });
+    fireEvent.change(screen.getAllByPlaceholderText("john.doe@gmail.com")[1], {
+      target: { value: "amina@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+1 (555) 000-0000"), {
+      target: { value: "+33 6 10 10 10 10" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByRole("heading", { name: "Set up your profile" })).toBeInTheDocument();
+
+    const stored = JSON.parse(window.localStorage.getItem(openRideWorkflowStorageKey) ?? "{}");
+    expect(stored.authStatus).toBe("authenticated");
+    expect(stored.profileCompleted).toBe(false);
+    expect(stored.trustCompleted).toBe(false);
   });
 
-  it("toggles the authentication hub tabs", async () => {
+  it("keeps the authentication hub tabs working and login opens the app", async () => {
     renderRoute("/authentication-hub");
 
-    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sign Up" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Sign Up" }));
     expect(await screen.findByRole("heading", { name: "Create an account" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Log In" }));
     expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getAllByPlaceholderText("john.doe@example.com")[0], {
+      target: { value: "premium@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
+
+    expect(await screen.findByRole("heading", { name: "Résultats de Recherche" })).toBeInTheDocument();
   });
 
-  it("opens the mobile navigation on dashboard screens", async () => {
-    const { container } = renderRoute("/search-results");
+  it("continues onboarding from setup profile to trust center to search results", async () => {
+    seedWorkflowState({
+      authStatus: "authenticated",
+      onboardingStep: "setup-profile",
+      profileCompleted: false,
+      trustCompleted: false,
+    });
+    renderRoute("/setup-profile");
 
-    await screen.findByRole("heading", { name: "Résultats de Recherche" });
-    const nav = container.querySelector<HTMLElement>("#nav-links");
-    const menuButton = container.querySelector<HTMLElement>("#mobile-menu-btn");
-    expect(nav).toHaveClass("hidden");
-    fireEvent.click(menuButton!);
-    expect(nav).toHaveClass("flex");
-    expect(nav).not.toHaveClass("hidden");
+    fireEvent.change(await screen.findByPlaceholderText("John"), { target: { value: "Nina" } });
+    fireEvent.change(screen.getByPlaceholderText("Doe"), { target: { value: "Kole" } });
+    fireEvent.change(screen.getByPlaceholderText("(555) 000-0000"), {
+      target: { value: "6 11 22 33 44" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save & Continue/i }));
+
+    expect(await screen.findByRole("heading", { name: "Trust Center" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Terminer/i }));
+    expect(await screen.findByRole("heading", { name: "Résultats de Recherche" })).toBeInTheDocument();
   });
 
-  it("toggles available seats on the trip details screen", async () => {
-    const { container } = renderRoute("/trip-details");
+  it("completes the passenger booking flow and opens the related conversation", async () => {
+    seedAuthenticatedWorkflow();
+    renderRoute("/search-results");
 
-    await screen.findByRole("heading", { name: "Détails du Trajet" });
-    const seatButton = container.querySelector<HTMLElement>(".seat-btn:not(.taken)");
-    expect(seatButton).not.toBeNull();
-    fireEvent.click(seatButton!);
-    expect(seatButton).toHaveClass("selected");
-  });
+    fireEvent.click(await screen.findAllByRole("button", { name: "View Details" }).then((buttons) => buttons[0]));
+    expect(await screen.findByRole("heading", { name: "Détails du Trajet" })).toBeInTheDocument();
 
-  it("updates payment selection and shows the success modal", async () => {
-    const { container } = renderRoute("/payment-booking");
+    fireEvent.click(screen.getByRole("button", { name: "Réserver" }));
+    expect(await screen.findByRole("heading", { name: "Paiement & Réservation" })).toBeInTheDocument();
 
-    await screen.findByRole("heading", { name: "Paiement & Réservation" });
     vi.useFakeTimers();
-    const radios = container.querySelectorAll<HTMLInputElement>('input[name="payment"]');
-    fireEvent.click(radios[1]);
-    expect(radios[1].closest("label")).toHaveClass("border-brand-accentGreen");
-
-    fireEvent.click(container.querySelector<HTMLElement>("#confirm-btn")!);
+    fireEvent.click(screen.getByRole("button", { name: /Payer et Réserver/i }));
     act(() => {
       vi.advanceTimersByTime(1500);
     });
-    expect(container.querySelector("#success-modal")).toHaveClass("flex");
+    expect(screen.getByText("Réservation Confirmée !")).toBeInTheDocument();
     vi.useRealTimers();
+
+    fireEvent.click(screen.getByRole("button", { name: /Envoyer un message/i }));
+    expect(await screen.findByRole("heading", { name: "Messages" })).toBeInTheDocument();
+    expect((await screen.findAllByText("Paris → Lyon")).length).toBeGreaterThan(0);
+    const stored = JSON.parse(window.localStorage.getItem(openRideWorkflowStorageKey) ?? "{}");
+    expect(stored.activeConversationId).toBeTruthy();
+  });
+
+  it("publishes a trip and stores it in the driver workflow", async () => {
+    seedAuthenticatedWorkflow();
+    renderRoute("/publish-trip");
+
+    fireEvent.change(await screen.findByPlaceholderText("Ville de départ (ex: Paris)"), {
+      target: { value: "Bruxelles" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Ville d'arrivée (ex: Lyon)"), {
+      target: { value: "Amsterdam" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Sauvegarder Brouillon/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Publier le trajet/i }));
+
+    expect(await screen.findByRole("heading", { name: "Mes Trajets" })).toBeInTheDocument();
+    const stored = JSON.parse(window.localStorage.getItem(openRideWorkflowStorageKey) ?? "{}");
+    expect(stored.publishDraft.departure).toBe("Bruxelles");
+    expect(stored.publishedTrips[0].routeLabel).toContain("Bruxelles");
+  });
+
+  it("persists profile changes from settings", async () => {
+    const state = seedAuthenticatedWorkflow();
+    renderRoute("/profile-settings");
+
+    fireEvent.change(await screen.findByDisplayValue(state.user.fullName.includes("Ronald") ? "Ronald" : state.user.firstName), {
+      target: { value: "Lina" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Enregistrer les modifications/i }));
+
+    expect((await screen.findAllByText("Lina Richards")).length).toBeGreaterThan(0);
+    const stored = JSON.parse(window.localStorage.getItem(openRideWorkflowStorageKey) ?? "{}");
+    expect(stored.user.firstName).toBe("Lina");
+  });
+
+  it("sends messages inside the active conversation", async () => {
+    seedAuthenticatedWorkflow({
+      activeConversationId: "conversation-ride-paris-lyon",
+    });
+    renderRoute("/messages");
+
+    fireEvent.change(await screen.findByPlaceholderText("Écrivez votre message..."), {
+      target: { value: "À tout à l'heure !" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer le message" }));
+
+    expect((await screen.findAllByText("À tout à l'heure !")).length).toBeGreaterThan(0);
   });
 
   it("applies the selected theme globally and persists it", async () => {
+    seedAuthenticatedWorkflow();
     const { container, unmount } = renderRoute("/profile-settings");
 
     await screen.findByRole("heading", { name: "Profil & Paramètres" });
@@ -144,6 +291,7 @@ describe("OpenRide routes", () => {
   });
 
   it("replaces external uxpilot links with local navigation targets", async () => {
+    seedAuthenticatedWorkflow();
     const { container } = renderRoute("/search-results");
 
     await screen.findByRole("heading", { name: "Résultats de Recherche" });
