@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { handleOpenRideRouteClick, preventDefaultSubmit } from "@/openride/shared/navigation";
 import { type PaymentMethodId, useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useCreateBooking, useCreateConversation } from "@/integrations/supabase/hooks";
 import { PaymentBookingContent, PaymentBookingHeader } from "./components";
 import BookingSuccessModal from "./components/BookingSuccessModal";
 
@@ -14,6 +16,7 @@ const PaymentBookingPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const workflow = useOpenRideWorkflow();
+  const createBookingMutation = useCreateBooking();
 
   useEffect(() => {
     return () => {
@@ -25,26 +28,17 @@ const PaymentBookingPage = () => {
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) {
-      return;
-    }
+    if (!root) return;
 
     const radios = Array.from(root.querySelectorAll<HTMLInputElement>('input[name="payment"]'));
     radios.forEach((radio, index) => {
       const label = radio.closest("label");
       radio.checked = index === paymentMethod;
-
-      if (!label) {
-        return;
-      }
-
+      if (!label) return;
       label.classList.remove(
-        "border-brand-accentGreen",
-        "bg-brand-surfaceLight",
-        "border-gray-700",
-        "bg-brand-surface",
+        "border-brand-accentGreen", "bg-brand-surfaceLight",
+        "border-gray-700", "bg-brand-surface",
       );
-
       if (index === paymentMethod) {
         label.classList.add("border-brand-accentGreen", "bg-brand-surfaceLight");
       } else {
@@ -57,9 +51,7 @@ const PaymentBookingPage = () => {
     <OpenRidePageFrame
       bodyClassName="w-full min-h-screen flex flex-col md:flex-row bg-brand-background overflow-hidden font-sans"
       onClickCapture={(event) => {
-        if (handleOpenRideRouteClick(event, navigate)) {
-          return;
-        }
+        if (handleOpenRideRouteClick(event, navigate)) return;
 
         const target = event.target as HTMLElement | null;
         const bookingAction =
@@ -85,11 +77,7 @@ const PaymentBookingPage = () => {
             rootRef.current?.querySelectorAll<HTMLInputElement>('input[name="payment"]') ?? [],
           );
           const nextIndex = radios.indexOf(paymentInput);
-
-          if (nextIndex >= 0) {
-            setPaymentMethod(nextIndex);
-          }
-
+          if (nextIndex >= 0) setPaymentMethod(nextIndex);
           return;
         }
 
@@ -110,22 +98,17 @@ const PaymentBookingPage = () => {
             seatControl === "increment"
               ? Math.min(currentSeats + 1, maxSeats)
               : Math.max(currentSeats - 1, 1);
-
           workflow.updateBookingDraft({ seatCount: nextSeatCount });
           return;
         }
 
         const confirmButton = target?.closest<HTMLElement>("#confirm-btn");
-        if (!confirmButton || isProcessing) {
-          return;
-        }
+        if (!confirmButton || isProcessing) return;
 
         event.preventDefault();
         setIsProcessing(true);
 
-        if (timeoutRef.current) {
-          window.clearTimeout(timeoutRef.current);
-        }
+        if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
 
         timeoutRef.current = window.setTimeout(() => {
           const paymentValues: PaymentMethodId[] = ["card", "wallet", "paypal", "cash"];
@@ -133,32 +116,63 @@ const PaymentBookingPage = () => {
             const field = rootRef.current?.querySelector<
               HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
             >(`[name="${name}"]`);
-
-            if (!field) {
-              return "";
-            }
-
+            if (!field) return "";
             if (field instanceof HTMLInputElement && field.type === "checkbox") {
               return field.checked ? "true" : "";
             }
-
             return field.value;
           };
           const selectedPayment =
             rootRef.current?.querySelector<HTMLInputElement>('input[name="payment"]:checked')
               ?.value as PaymentMethodId | undefined;
+          const chosenMethod = selectedPayment ?? paymentValues[paymentMethod] ?? "card";
 
-          workflow.completeBooking({
-            email: readFieldValue("email").trim() || workflow.user?.email || "",
-            firstName: readFieldValue("firstName").trim() || workflow.user?.firstName || "",
-            lastName: readFieldValue("lastName").trim() || workflow.user?.lastName || "",
-            message: readFieldValue("message").trim(),
-            paymentMethod: selectedPayment ?? paymentValues[paymentMethod] ?? "card",
-            phone: readFieldValue("phone").trim() || workflow.user?.phone || "",
-            seatCount: workflow.bookingDraft.seatCount,
-          });
-          setIsProcessing(false);
-          setShowSuccess(true);
+          // Call Supabase booking creation if we have a real ride ID (UUID format)
+          const rideId = workflow.bookingDraft.rideId ?? workflow.selectedRide?.id;
+          const isRealId = rideId && /^[0-9a-f]{8}-/.test(rideId);
+
+          if (isRealId) {
+            createBookingMutation.mutate(
+              {
+                ride_id: rideId,
+                seat_count: workflow.bookingDraft.seatCount,
+                payment_method: chosenMethod,
+                message: readFieldValue("message").trim() || undefined,
+              },
+              {
+                onSuccess: () => {
+                  // Also update local workflow for UI
+                  workflow.completeBooking({
+                    email: readFieldValue("email").trim() || workflow.user?.email || "",
+                    firstName: readFieldValue("firstName").trim() || workflow.user?.firstName || "",
+                    lastName: readFieldValue("lastName").trim() || workflow.user?.lastName || "",
+                    message: readFieldValue("message").trim(),
+                    paymentMethod: chosenMethod,
+                    seatCount: workflow.bookingDraft.seatCount,
+                  });
+                  setIsProcessing(false);
+                  setShowSuccess(true);
+                  toast.success("Réservation confirmée !");
+                },
+                onError: (err) => {
+                  setIsProcessing(false);
+                  toast.error(err.message || "Erreur lors de la réservation");
+                },
+              }
+            );
+          } else {
+            // Fallback to local workflow (seed data)
+            workflow.completeBooking({
+              email: readFieldValue("email").trim() || workflow.user?.email || "",
+              firstName: readFieldValue("firstName").trim() || workflow.user?.firstName || "",
+              lastName: readFieldValue("lastName").trim() || workflow.user?.lastName || "",
+              message: readFieldValue("message").trim(),
+              paymentMethod: chosenMethod,
+              seatCount: workflow.bookingDraft.seatCount,
+            });
+            setIsProcessing(false);
+            setShowSuccess(true);
+          }
         }, 1500);
       }}
       onSubmitCapture={preventDefaultSubmit}
