@@ -155,7 +155,7 @@ function TripsList({
                 <div className="mb-4 grid grid-cols-2 gap-4 border-y border-white/5 py-4 sm:grid-cols-4">
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Places</p>
-                    <span className="text-sm text-gray-300">{item.passengersLabel}</span>
+                    <span className="text-sm text-gray-300">{(item as PublishedTrip).passengersLabel}</span>
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Annonce</p>
