@@ -52,7 +52,7 @@ function TripsList({
                     </div>
                     <div>
                       <h3 className="font-medium text-white">{item.routeLabel}</h3>
-                      <p className="text-sm text-gray-400">{item.departureLabel}</p>
+                      <p className="text-sm text-gray-400">{(item as PassengerTrip).departureLabel}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -79,7 +79,7 @@ function TripsList({
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Passagers</p>
-                    <span className="text-sm text-gray-300">{item.passengersLabel}</span>
+                    <span className="text-sm text-gray-300">{(item as PassengerTrip).passengersLabel}</span>
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Paiement</p>
@@ -101,7 +101,7 @@ function TripsList({
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Véhicule</p>
-                    <span className="text-sm text-gray-300">{item.vehicleName}</span>
+                    <span className="text-sm text-gray-300">{(item as PassengerTrip).vehicleName}</span>
                   </div>
                 </div>
 
@@ -111,7 +111,7 @@ function TripsList({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      onOpenDetails(item.rideId);
+                      onOpenDetails((item as PassengerTrip).rideId);
                     }}
                   >
                     Voir détails
@@ -121,7 +121,7 @@ function TripsList({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      onMessage(item.rideId);
+                      onMessage((item as PassengerTrip).rideId);
                     }}
                   >
                     Message
@@ -139,7 +139,7 @@ function TripsList({
                     </div>
                     <div>
                       <h3 className="font-medium text-white">{item.routeLabel}</h3>
-                      <p className="text-sm text-gray-400">{item.departureLabel}</p>
+                      <p className="text-sm text-gray-400">{(item as PublishedTrip).departureLabel}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -155,7 +155,7 @@ function TripsList({
                 <div className="mb-4 grid grid-cols-2 gap-4 border-y border-white/5 py-4 sm:grid-cols-4">
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Places</p>
-                    <span className="text-sm text-gray-300">{item.passengersLabel}</span>
+                    <span className="text-sm text-gray-300">{(item as PublishedTrip).passengersLabel}</span>
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Annonce</p>
@@ -169,7 +169,7 @@ function TripsList({
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Véhicule</p>
-                    <span className="text-sm text-gray-300">{item.vehicleName}</span>
+                    <span className="text-sm text-gray-300">{(item as PublishedTrip).vehicleName}</span>
                   </div>
                 </div>
 
@@ -178,7 +178,7 @@ function TripsList({
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onOpenDetails(item.rideId);
+                    onOpenDetails((item as PublishedTrip).rideId);
                   }}
                 >
                   Voir détails
