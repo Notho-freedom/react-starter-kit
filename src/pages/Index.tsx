@@ -1,8 +1,5 @@
-const Index = () => {
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-    </div>
-  );
-};
+import { SearchResultsPage } from "./OpenRidePages";
+
+const Index = () => <SearchResultsPage />;
 
 export default Index;
