@@ -15,7 +15,7 @@ export function useProfile(userId?: string) {
         .eq("id", userId)
         .single();
       if (error) throw error;
-      return data;
+      return data as Record<string, unknown>;
     },
     enabled: !!userId,
   });
@@ -29,7 +29,7 @@ export function useUpdateProfile() {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("profiles")
-        .upsert({ id: user.id, ...payload })
+        .upsert({ id: user.id, ...payload } as never)
         .select()
         .single();
       if (error) throw error;
@@ -49,7 +49,7 @@ export function useTrips(filters?: { departure?: string; destination?: string; d
     queryFn: async () => {
       let query = supabase
         .from("trips")
-        .select("*, driver:profiles!trips_driver_id_fkey(*)")
+        .select("*, driver:profiles!inner(*)")
         .eq("status", "published")
         .order("date", { ascending: true });
 
@@ -65,7 +65,7 @@ export function useTrips(filters?: { departure?: string; destination?: string; d
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
   });
 }
@@ -82,7 +82,7 @@ export function useMyTrips() {
         .eq("driver_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
     enabled: !!user,
   });
@@ -118,7 +118,7 @@ export function usePublishTrip() {
           driver_id: user.id,
           seats_left: payload.seats_total,
           status: "published",
-        })
+        } as never)
         .select()
         .single();
       if (error) throw error;
@@ -139,7 +139,7 @@ export function useDriverAvailabilities(filters?: { zone?: string; date?: string
     queryFn: async () => {
       let query = supabase
         .from("driver_availabilities")
-        .select("*, driver:profiles!driver_availabilities_driver_id_fkey(*)")
+        .select("*, driver:profiles!inner(*)")
         .eq("status", "active")
         .order("date", { ascending: true });
 
@@ -152,7 +152,7 @@ export function useDriverAvailabilities(filters?: { zone?: string; date?: string
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
   });
 }
@@ -169,7 +169,7 @@ export function useMyAvailabilities() {
         .eq("driver_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
     enabled: !!user,
   });
@@ -191,7 +191,7 @@ export function usePublishAvailability() {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("driver_availabilities")
-        .insert({ ...payload, driver_id: user.id })
+        .insert({ ...payload, driver_id: user.id } as never)
         .select()
         .single();
       if (error) throw error;
@@ -210,7 +210,7 @@ export function useCancelAvailability() {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("driver_availabilities")
-        .update({ status: "cancelled" as const })
+        .update({ status: "cancelled" } as never)
         .eq("id", id);
       if (error) throw error;
     },
@@ -229,7 +229,7 @@ export function useRideRequests(filters?: { origin?: string; date?: string }) {
     queryFn: async () => {
       let query = supabase
         .from("ride_requests")
-        .select("*, passenger:profiles!ride_requests_passenger_id_fkey(*)")
+        .select("*, passenger:profiles!inner(*)")
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
@@ -242,7 +242,7 @@ export function useRideRequests(filters?: { origin?: string; date?: string }) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
   });
 }
@@ -259,7 +259,7 @@ export function useMyRequests() {
         .eq("passenger_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
     enabled: !!user,
   });
@@ -281,7 +281,7 @@ export function useCreateRideRequest() {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("ride_requests")
-        .insert({ ...payload, passenger_id: user.id })
+        .insert({ ...payload, passenger_id: user.id } as never)
         .select()
         .single();
       if (error) throw error;
@@ -300,7 +300,7 @@ export function useCancelRideRequest() {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("ride_requests")
-        .update({ status: "cancelled" as const })
+        .update({ status: "cancelled" } as never)
         .eq("id", id);
       if (error) throw error;
     },
@@ -321,11 +321,11 @@ export function useMyBookings() {
       if (!user) return [];
       const { data, error } = await supabase
         .from("bookings")
-        .select("*, trip:trips(*), trip_driver:trips(driver:profiles!trips_driver_id_fkey(*))")
+        .select("*, trip:trips(*)")
         .eq("passenger_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
     enabled: !!user,
   });
@@ -345,10 +345,10 @@ export function useCreateBooking() {
 
       const paymentStatus =
         payload.payment_method === "cash"
-          ? ("cash_pending" as const)
+          ? "cash_pending"
           : payload.payment_method === "wallet"
-            ? ("authorized" as const)
-            : ("paid" as const);
+            ? "authorized"
+            : "paid";
 
       const { data, error } = await supabase
         .from("bookings")
@@ -357,16 +357,25 @@ export function useCreateBooking() {
           passenger_id: user.id,
           payment_status: paymentStatus,
           status: "confirmed",
-        })
+        } as never)
         .select()
         .single();
       if (error) throw error;
 
-      // Decrement seats_left
-      await supabase.rpc("decrement_seats" as never, {
-        trip_id: payload.ride_id,
-        count: payload.seat_count,
-      } as never).then(() => {});
+      // Decrement seats_left on the trip
+      const { data: trip } = await supabase
+        .from("trips")
+        .select("seats_left")
+        .eq("id", payload.ride_id)
+        .single();
+
+      if (trip) {
+        const newSeats = Math.max(0, (trip.seats_left as number) - payload.seat_count);
+        await supabase
+          .from("trips")
+          .update({ seats_left: newSeats } as never)
+          .eq("id", payload.ride_id);
+      }
 
       return data;
     },
@@ -385,16 +394,37 @@ export function useConversations() {
     queryKey: ["conversations", user?.id],
     queryFn: async () => {
       if (!user) return [];
+      // Get conversations where user is participant
+      const { data: participations, error: pError } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", user.id);
+      if (pError) throw pError;
+
+      const convoIds = (participations ?? []).map((p) => p.conversation_id as string);
+      if (convoIds.length === 0) return [];
+
       const { data, error } = await supabase
         .from("conversations")
-        .select(`
-          *,
-          participants:conversation_participants(*, profile:profiles(*)),
-          latest_message:messages(id, text, sender_id, created_at)
-        `)
+        .select("*, participants:conversation_participants(*, profile:profiles(*))")
+        .in("id", convoIds)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      // Get latest message for each conversation
+      const withMessages = await Promise.all(
+        (data ?? []).map(async (convo) => {
+          const { data: msgs } = await supabase
+            .from("messages")
+            .select("*")
+            .eq("conversation_id", convo.id as string)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          return { ...convo, latest_message: msgs?.[0] ?? null };
+        })
+      );
+
+      return withMessages as Array<Record<string, unknown>>;
     },
     enabled: !!user,
   });
@@ -407,11 +437,11 @@ export function useMessages(conversationId?: string) {
       if (!conversationId) return [];
       const { data, error } = await supabase
         .from("messages")
-        .select("*, sender:profiles!messages_sender_id_fkey(first_name, last_name, avatar_url)")
+        .select("*, sender:profiles(first_name, last_name, avatar_url)")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return data;
+      return data as Array<Record<string, unknown>>;
     },
     enabled: !!conversationId,
   });
@@ -425,7 +455,7 @@ export function useSendMessage() {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("messages")
-        .insert({ ...payload, sender_id: user.id })
+        .insert({ ...payload, sender_id: user.id } as never)
         .select()
         .single();
       if (error) throw error;
@@ -453,41 +483,53 @@ export function useCreateConversation() {
       if (!user) throw new Error("Not authenticated");
 
       // Check if conversation already exists
-      const { data: existing } = await supabase
-        .from("conversations")
-        .select("*, participants:conversation_participants(user_id)")
-        .eq("context_type", payload.context_type)
-        .eq("context_id", payload.context_id);
+      const { data: myParticipations } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", user.id);
 
-      const existingConvo = existing?.find((c) =>
-        (c.participants as Array<{ user_id: string }>)?.some((p) => p.user_id === payload.other_user_id)
-      );
+      const myConvoIds = (myParticipations ?? []).map((p) => p.conversation_id as string);
 
-      if (existingConvo) return existingConvo;
+      if (myConvoIds.length > 0) {
+        const { data: existingConvos } = await supabase
+          .from("conversations")
+          .select("*, participants:conversation_participants(user_id)")
+          .in("id", myConvoIds)
+          .eq("context_type", payload.context_type)
+          .eq("context_id", payload.context_id);
+
+        const existingConvo = existingConvos?.find((c: Record<string, unknown>) =>
+          (c.participants as Array<{ user_id: string }>)?.some(
+            (p) => p.user_id === payload.other_user_id
+          )
+        );
+        if (existingConvo) return existingConvo;
+      }
 
       const { data: conversation, error: convoError } = await supabase
         .from("conversations")
         .insert({
           context_type: payload.context_type,
           context_id: payload.context_id,
-        })
+        } as never)
         .select()
         .single();
       if (convoError) throw convoError;
+      if (!conversation) throw new Error("Failed to create conversation");
 
-      // Add participants
+      const convoId = (conversation as Record<string, unknown>).id as string;
+
       await supabase.from("conversation_participants").insert([
-        { conversation_id: conversation.id, user_id: user.id, role_label: payload.my_role_label || "Moi" },
-        { conversation_id: conversation.id, user_id: payload.other_user_id, role_label: payload.their_role_label || "Participant" },
+        { conversation_id: convoId, user_id: user.id, role_label: payload.my_role_label || "Moi" } as never,
+        { conversation_id: convoId, user_id: payload.other_user_id, role_label: payload.their_role_label || "Participant" } as never,
       ]);
 
-      // Send initial message if provided
       if (payload.initial_message) {
         await supabase.from("messages").insert({
-          conversation_id: conversation.id,
+          conversation_id: convoId,
           sender_id: user.id,
           text: payload.initial_message,
-        });
+        } as never);
       }
 
       return conversation;
