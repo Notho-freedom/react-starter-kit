@@ -13,6 +13,15 @@ function listFiles(dir: string): string[] {
 }
 
 describe("OpenRide structure", () => {
+  it("does not force route themes directly in Page.tsx files", () => {
+    const pageFiles = listFiles(routesRoot).filter((file) => file.endsWith("Page.tsx"));
+
+    for (const file of pageFiles) {
+      const content = fs.readFileSync(file, "utf8");
+      expect(content).not.toContain("openride-theme-");
+    }
+  });
+
   it("keeps one Page.tsx entry per route folder", () => {
     const routeDirs = fs
       .readdirSync(routesRoot, { withFileTypes: true })

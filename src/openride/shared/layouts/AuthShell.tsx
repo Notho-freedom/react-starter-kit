@@ -12,7 +12,7 @@ export function AuthShell({ className, formPanel, reverseDesktop = false, visual
   return (
     <main
       className={cn(
-        "w-full max-w-7xl mx-auto flex flex-col overflow-hidden rounded-[2rem] shadow-2xl",
+        "w-full max-w-7xl mx-auto flex flex-col overflow-hidden rounded-[2rem] shadow-2xl glass-panel border border-white/10",
         reverseDesktop ? "lg:flex-row-reverse" : "lg:flex-row",
         className,
       )}

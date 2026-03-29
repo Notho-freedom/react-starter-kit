@@ -1,5 +1,6 @@
 import { useEffect, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useOpenRideTheme } from "@/openride/shared/theme";
 
 type OpenRidePageFrameProps = {
   bodyClassName: string;
@@ -20,14 +21,17 @@ export function OpenRidePageFrame({
   pageId,
   title,
 }: OpenRidePageFrameProps) {
+  const { theme, themeId } = useOpenRideTheme();
+
   useEffect(() => {
     document.title = title;
   }, [title]);
 
   return (
     <div
-      className={cn("openride-page", bodyClassName, className)}
+      className={cn("openride-page", bodyClassName, theme.className, className)}
       data-openride-page={pageId}
+      data-openride-theme={themeId}
       onClickCapture={onClickCapture}
       onSubmitCapture={onSubmitCapture}
     >

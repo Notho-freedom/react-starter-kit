@@ -9,7 +9,6 @@ const MessagesPage = () => {
   return (
     <OpenRidePageFrame
       bodyClassName="w-full min-h-screen flex flex-col md:flex-row bg-brand-background overflow-hidden font-sans text-brand-text"
-      className="openride-theme-dashboard"
       onClickCapture={(event) => {
         handleOpenRideRouteClick(event, navigate);
       }}

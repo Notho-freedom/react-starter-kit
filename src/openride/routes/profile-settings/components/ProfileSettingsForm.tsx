@@ -1,4 +1,5 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
+import ThemeSettingsSection from "./ThemeSettingsSection";
 
 const ProfileSettingsForm = () => (
   <>
@@ -114,6 +115,8 @@ const ProfileSettingsForm = () => (
                 </div>
               </div>
             </div>
+            <hr className="border-white/10" />
+            <ThemeSettingsSection />
             {/* Save Actions */}
             <div className="pt-6 mt-8 border-t border-white/10 flex flex-col-reverse sm:flex-row justify-end gap-4">
               <button type="button" className="px-6 py-3 rounded-xl border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors">

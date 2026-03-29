@@ -10,7 +10,7 @@ const AuthVisualPanel = () => (
       <div className="absolute bottom-0 left-0 w-full p-12 text-white">
         <div className="glass-panel p-8 rounded-2xl max-w-md backdrop-blur-md bg-white/10 border border-white/20">
           <div className="flex gap-2 mb-4">
-            <span className="w-8 h-1.5 bg-accent rounded-full" />
+            <span className="w-8 h-1.5 bg-brand-accent rounded-full" />
             <span className="w-2 h-1.5 bg-white/40 rounded-full" />
             <span className="w-2 h-1.5 bg-white/40 rounded-full" />
           </div>
@@ -18,14 +18,14 @@ const AuthVisualPanel = () => (
           <p className="text-gray-200 text-sm leading-relaxed mb-6">
             Connect with verified drivers and passengers heading your way. Save money, reduce your carbon footprint, and make new friends on the road.
           </p>
-          {/* Mini Trust Badges */}
-          <div className="flex gap-6 border-t border-white/20 pt-4">
-            <div className="flex items-center gap-2">
-              <OpenRideIcon name="shield-halved" className="text-accent" />
+            {/* Mini Trust Badges */}
+            <div className="flex gap-6 border-t border-white/20 pt-4">
+              <div className="flex items-center gap-2">
+              <OpenRideIcon name="shield-halved" className="text-brand-accent" />
               <span className="text-xs font-medium">Verified Users</span>
             </div>
             <div className="flex items-center gap-2">
-              <OpenRideIcon name="leaf" className="text-accent" />
+              <OpenRideIcon name="leaf" className="text-brand-accent" />
               <span className="text-xs font-medium">Eco-Friendly</span>
             </div>
           </div>

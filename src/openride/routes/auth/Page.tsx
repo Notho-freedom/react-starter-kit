@@ -22,8 +22,7 @@ const AuthPage = () => {
 
   return (
     <OpenRidePageFrame
-      bodyClassName="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-[#f4f7f6]"
-      className="openride-theme-auth-light"
+      bodyClassName="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-brand-background"
       onClickCapture={(event) => {
         preventHashAnchor(event);
         const target = event.target as HTMLElement | null;
@@ -39,7 +38,6 @@ const AuthPage = () => {
       title="Rideshare Login & Registration"
     >
       <AuthShell
-        className="bg-white"
         formPanel={<div ref={rootRef} className="contents"><AuthFormsPanel /></div>}
         visualPanel={<AuthVisualPanel />}
       />

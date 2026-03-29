@@ -13,7 +13,6 @@ const TrustCenterPage = () => {
   return (
     <OpenRidePageFrame
       bodyClassName="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-brand-background"
-      className="openride-theme-trust-dark"
       onClickCapture={(event) => {
         preventHashAnchor(event);
         handleOpenRideRouteClick(event, navigate);
@@ -23,7 +22,7 @@ const TrustCenterPage = () => {
       title="Trust Center & Verification"
     >
       <AuthShell
-        className="glass-panel max-w-6xl border border-white/10"
+        className="max-w-6xl"
         formPanel={<TrustCenterContentPanel />}
         reverseDesktop
         visualPanel={<TrustCenterVisualPanel />}

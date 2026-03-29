@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AppRoutes from "@/AppRoutes";
+import { openRideThemeStorageKey } from "@/openride/shared/theme";
 
 const routeExpectations = [
   { path: "/", heading: "Résultats de Recherche", title: "Ride Sharing - Résultats de Recherche" },
@@ -34,6 +35,15 @@ describe("OpenRide routes", () => {
     await waitFor(() => {
       expect(document.title).toBe(title);
     });
+  });
+
+  it("uses the default OpenRide theme when no preference is saved", async () => {
+    const { container } = renderRoute("/search-results");
+
+    await screen.findByRole("heading", { name: "Résultats de Recherche" });
+    expect(
+      container.querySelector('[data-openride-page="search-results"]'),
+    ).toHaveAttribute("data-openride-theme", "default");
   });
 
   it("toggles auth screens on the login and registration page", async () => {
@@ -95,6 +105,26 @@ describe("OpenRide routes", () => {
     vi.useRealTimers();
   });
 
+  it("applies the selected theme globally and persists it", async () => {
+    const { container, unmount } = renderRoute("/profile-settings");
+
+    await screen.findByRole("heading", { name: "Profil & Paramètres" });
+    fireEvent.click(screen.getByRole("button", { name: /Auth sombre/i }));
+
+    expect(
+      container.querySelector('[data-openride-page="profile-settings"]'),
+    ).toHaveAttribute("data-openride-theme", "auth-dark");
+    expect(window.localStorage.getItem(openRideThemeStorageKey)).toBe("auth-dark");
+
+    unmount();
+
+    const nextRender = renderRoute("/auth");
+    expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(
+      nextRender.container.querySelector('[data-openride-page="auth"]'),
+    ).toHaveAttribute("data-openride-theme", "auth-dark");
+  });
+
   it("replaces external uxpilot links with local navigation targets", async () => {
     const { container } = renderRoute("/search-results");
 
@@ -106,4 +136,5 @@ describe("OpenRide routes", () => {
 
 afterEach(() => {
   vi.useRealTimers();
+  window.localStorage.clear();
 });

@@ -1,7 +1,7 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 
 const AuthenticationHubFormsPanel = () => (
-<section id="auth-forms" className="w-full lg:w-1/2 p-8 sm:p-12 lg:p-16 flex flex-col justify-center relative z-10 bg-[#0f172a]/80 backdrop-blur-xl">
+<section id="auth-forms" className="w-full lg:w-1/2 p-8 sm:p-12 lg:p-16 flex flex-col justify-center relative z-10 bg-brand-background/80 backdrop-blur-xl">
     {/* Mobile Logo (Hidden on Desktop) */}
     <div className="mb-10 lg:hidden flex justify-center">
       <a href="#" className="flex items-center gap-3 text-2xl font-serif font-semibold text-white tracking-tight">

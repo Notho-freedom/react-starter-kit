@@ -54,7 +54,6 @@ const PaymentBookingPage = () => {
   return (
     <OpenRidePageFrame
       bodyClassName="w-full min-h-screen flex flex-col md:flex-row bg-brand-background overflow-hidden font-sans"
-      className="openride-theme-dashboard"
       onClickCapture={(event) => {
         if (handleOpenRideRouteClick(event, navigate)) {
           return;

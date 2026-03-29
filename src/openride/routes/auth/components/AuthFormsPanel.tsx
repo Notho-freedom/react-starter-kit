@@ -5,7 +5,7 @@ const AuthFormsPanel = () => (
     {/* Logo */}
     <div className="mb-10 lg:mb-16">
       <a href="#" className="flex items-center gap-2 text-2xl font-serif font-semibold text-gray-900 tracking-tight">
-        <OpenRideIcon name="car-side" className="text-accent" />
+        <OpenRideIcon name="car-side" className="text-brand-accent" />
         RideShare
       </a>
     </div>
@@ -30,18 +30,18 @@ const AuthFormsPanel = () => (
         {/* Options */}
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 cursor-pointer group">
-            <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-accent focus:ring-accent/20" />
+            <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-brand-accent focus:ring-brand-accent/20" />
             <span className="text-gray-600 group-hover:text-gray-900 transition-colors">Remember me</span>
           </label>
-          <a href="#" className="text-accent hover:text-accent-dark font-medium transition-colors">Forgot Password?</a>
+          <a href="#" className="text-brand-accent hover:opacity-80 font-medium transition-colors">Forgot Password?</a>
         </div>
         {/* Submit Button */}
-        <button type="button" className="w-full bg-accent hover:bg-accent-dark text-white font-medium py-3.5 rounded-lg transition-colors mt-6 shadow-lg shadow-accent/20">
+        <button type="button" className="w-full bg-brand-accent hover:opacity-90 text-white font-medium py-3.5 rounded-lg transition-colors mt-6 shadow-lg shadow-brand-accent/20">
           Login
         </button>
       </form>
       <p className="text-center text-sm text-gray-600 mt-6">
-        Don't have an account? <a href="#" className="text-accent font-medium hover:underline" data-openride-toggle="signup">Sign up</a>
+        Don't have an account? <a href="#" className="text-brand-accent font-medium hover:underline" data-openride-toggle="signup">Sign up</a>
       </p>
       {/* Social Login */}
       <div className="mt-8">
@@ -103,15 +103,15 @@ const AuthFormsPanel = () => (
           </button>
         </div>
         <div className="flex items-start gap-2 text-sm mt-4">
-          <input type="checkbox" className="mt-1 w-4 h-4 rounded border-gray-300 text-accent focus:ring-accent/20" required />
-          <span className="text-gray-600">I agree to all the <a href="#" className="text-accent hover:underline">Terms</a> and <a href="#" className="text-accent hover:underline">Privacy Policies</a></span>
+          <input type="checkbox" className="mt-1 w-4 h-4 rounded border-gray-300 text-brand-accent focus:ring-brand-accent/20" required />
+          <span className="text-gray-600">I agree to all the <a href="#" className="text-brand-accent hover:underline">Terms</a> and <a href="#" className="text-brand-accent hover:underline">Privacy Policies</a></span>
         </div>
-        <button type="button" className="w-full bg-accent hover:bg-accent-dark text-white font-medium py-3.5 rounded-lg transition-colors mt-6 shadow-lg shadow-accent/20">
+        <button type="button" className="w-full bg-brand-accent hover:opacity-90 text-white font-medium py-3.5 rounded-lg transition-colors mt-6 shadow-lg shadow-brand-accent/20">
           Create account
         </button>
       </form>
       <p className="text-center text-sm text-gray-600 mt-6">
-        Already have an account? <a href="#" className="text-accent font-medium hover:underline" data-openride-toggle="login">Login</a>
+        Already have an account? <a href="#" className="text-brand-accent font-medium hover:underline" data-openride-toggle="login">Login</a>
       </p>
       {/* Social Signup */}
       <div className="mt-6">

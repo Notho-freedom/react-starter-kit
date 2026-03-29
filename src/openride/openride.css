@@ -1,4 +1,5 @@
-:root {
+:root,
+.openride-theme-default {
   --brand-dark: 15 17 21;
   --brand-background: 15 17 21;
   --brand-surface: 28 31 38;

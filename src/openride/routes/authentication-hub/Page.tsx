@@ -37,8 +37,7 @@ const AuthenticationHubPage = () => {
 
   return (
     <OpenRidePageFrame
-      bodyClassName="w-full min-h-screen flex items-center justify-center bg-gradient-custom p-4 sm:p-8"
-      className="openride-theme-auth-dark"
+      bodyClassName="w-full min-h-screen flex items-center justify-center bg-brand-background p-4 sm:p-8"
       onClickCapture={(event) => {
         preventHashAnchor(event);
         const target = event.target as HTMLElement | null;
@@ -54,7 +53,7 @@ const AuthenticationHubPage = () => {
       title="Authentication Hub - Rideshare"
     >
       <AuthShell
-        className="glass-panel max-w-6xl border border-white/10"
+        className="max-w-6xl"
         formPanel={<div ref={rootRef} className="contents"><AuthenticationHubFormsPanel /></div>}
         visualPanel={<AuthenticationHubVisualPanel />}
       />

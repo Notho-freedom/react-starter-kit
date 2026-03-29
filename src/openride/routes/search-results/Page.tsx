@@ -9,7 +9,6 @@ const SearchResultsPage = () => {
   return (
     <OpenRidePageFrame
       bodyClassName="w-full min-h-screen flex flex-col md:flex-row bg-brand-background overflow-hidden"
-      className="openride-theme-search"
       onClickCapture={(event) => {
         handleOpenRideRouteClick(event, navigate);
       }}

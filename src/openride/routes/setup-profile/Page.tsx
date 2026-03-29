@@ -12,8 +12,7 @@ const SetupProfilePage = () => {
 
   return (
     <OpenRidePageFrame
-      bodyClassName="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-[#f1f5f9]"
-      className="openride-theme-setup-light"
+      bodyClassName="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-brand-background"
       onClickCapture={(event) => {
         preventHashAnchor(event);
         handleOpenRideRouteClick(event, navigate);
@@ -23,7 +22,6 @@ const SetupProfilePage = () => {
       title="Account Setup"
     >
       <AuthShell
-        className="bg-white"
         formPanel={<SetupProfileFormPanel />}
         visualPanel={<SetupProfileVisualPanel />}
       />
