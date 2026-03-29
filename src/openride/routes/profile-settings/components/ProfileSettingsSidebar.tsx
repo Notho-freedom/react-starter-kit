@@ -44,11 +44,11 @@ function ProfileSettingsSidebar() {
       <div className="glass-card rounded-2xl p-6">
         <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Niveau de confiance</h3>
         <div className="space-y-4">
-          {[
-            ["Email", workflow.user?.verification.emailVerified, "circle-check"],
-            ["Téléphone", workflow.user?.verification.phoneVerified, "circle-check"],
-            ["Pièce d'identité", workflow.user?.verification.idVerified, "id-card"],
-          ].map(([label, verified, icon]) => (
+          {([
+            ["Email", workflow.user?.verification.emailVerified, "circle-check"] as const,
+            ["Téléphone", workflow.user?.verification.phoneVerified, "circle-check"] as const,
+            ["Pièce d'identité", workflow.user?.verification.idVerified, "id-card"] as const,
+          ] as const).map(([label, verified, icon]) => (
             <div key={label} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full ${verified ? "bg-brand-success/10 text-brand-success" : "bg-brand-surface border border-white/10 text-gray-400"} flex items-center justify-center`}>

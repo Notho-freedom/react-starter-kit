@@ -257,18 +257,18 @@ const PublishTripFormSections = () => {
         </div>
 
         <div className="space-y-4">
-          {[
-            ["smokingAllowed", "smoking", "Fumeur autorisé", tripDraft.smokingAllowed],
-            ["petsAllowed", "paw", "Animaux acceptés", tripDraft.petsAllowed],
-            ["luggageAllowed", "suitcase", "Gros bagages", tripDraft.luggageAllowed],
-          ].map(([name, iconName, label, checked]) => (
+          {([
+            ["smokingAllowed", "smoking", "Fumeur autorisé", tripDraft.smokingAllowed] as const,
+            ["petsAllowed", "paw", "Animaux acceptés", tripDraft.petsAllowed] as const,
+            ["luggageAllowed", "suitcase", "Gros bagages", tripDraft.luggageAllowed] as const,
+          ] as const).map(([name, iconName, label, checked]) => (
             <div
               key={name}
               className="flex items-center justify-between p-4 bg-brand-surface rounded-xl border border-gray-700"
             >
               <div className="flex items-center gap-3">
                 <OpenRideIcon
-                  name={iconName as "smoking" | "paw" | "suitcase"}
+                  name={iconName}
                   className="text-gray-400"
                 />
                 <span className="text-white font-medium">{label}</span>
