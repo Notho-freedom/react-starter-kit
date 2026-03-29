@@ -248,6 +248,11 @@
   --theme-surface-soft: 248 250 252;
   --theme-surface-soft-strong: 241 245 249;
   --theme-surface-strong: 226 232 240;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 26%),
+    radial-gradient(circle at top right, rgba(217, 119, 6, 0.1), transparent 22%),
+    radial-gradient(circle at bottom left, rgba(22, 163, 74, 0.08), transparent 24%),
+    linear-gradient(180deg, #fbf9f4 0%, #f7f4ee 42%, #f2ede3 100%);
 }
 
 .glass-panel {
@@ -297,6 +302,80 @@
 
 .openride-theme-white {
   color: rgb(var(--brand-text));
+}
+
+.openride-theme-white.openride-page {
+  background-attachment: fixed;
+}
+
+.openride-theme-white .bg-brand-background {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 24%),
+    radial-gradient(circle at top right, rgba(217, 119, 6, 0.08), transparent 20%),
+    linear-gradient(180deg, #fbf9f4 0%, #f7f4ee 48%, #f3efe6 100%) !important;
+}
+
+.openride-theme-white .bg-brand-surface {
+  background-color: rgb(var(--brand-surface)) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(248, 250, 252, 0.94) 100%
+  ) !important;
+}
+
+.openride-theme-white .bg-brand-surfaceLight {
+  background-color: rgb(var(--brand-surface-light)) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(241, 235, 226, 0.96) 100%
+  ) !important;
+}
+
+.openride-theme-white .glass-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(249, 250, 251, 0.84) 100%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 32%);
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.1),
+    0 8px 24px rgba(148, 163, 184, 0.14);
+}
+
+.openride-theme-white .glass-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.92) 100%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.05), transparent 38%);
+  box-shadow:
+    0 16px 36px rgba(15, 23, 42, 0.06),
+    0 6px 16px rgba(148, 163, 184, 0.12);
+}
+
+.openride-theme-white .glass-card:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(241, 245, 249, 0.96) 100%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 42%);
+  transform: translateY(-1px);
+}
+
+.openride-theme-white .nav-item-active {
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(191, 219, 254, 0.22) 100%),
+    rgba(255, 255, 255, 0.86);
+}
+
+.openride-theme-white .input-field {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.openride-theme-white .input-field:focus-within {
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.08),
+    0 12px 24px rgba(37, 99, 235, 0.08);
 }
 
 .openride-theme-white .text-white {
@@ -363,6 +442,23 @@
 
 .openride-theme-white .hover\:text-white:hover {
   color: rgb(var(--brand-blue)) !important;
+}
+
+.openride-theme-white .bg-brand-accent {
+  background-image: linear-gradient(135deg, #d97706 0%, #ca8a04 100%) !important;
+}
+
+.openride-theme-white .bg-brand-purple {
+  background-image: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+}
+
+.openride-theme-white .bg-brand-accentGreen,
+.openride-theme-white .bg-brand-success {
+  background-image: linear-gradient(135deg, #22c55e 0%, #15803d 100%) !important;
+}
+
+.openride-theme-white .bg-brand-dark {
+  background-image: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
 }
 
 .openride-theme-white .bg-brand-accent.text-white,
@@ -447,6 +543,10 @@
 
 .map-marker {
   filter: drop-shadow(0 10px 20px rgba(139, 92, 246, 0.25));
+}
+
+.openride-theme-white .map-marker {
+  filter: drop-shadow(0 14px 24px rgba(37, 99, 235, 0.18));
 }
 
 .message-bubble-sent {
