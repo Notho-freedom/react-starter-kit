@@ -166,6 +166,20 @@ function PaymentBookingMainColumn() {
               <OpenRideIcon name="paypal" className="text-blue-400 text-xl" />
             </div>
           </label>
+
+          <label
+            className="flex items-center gap-4 p-4 rounded-2xl border border-gray-700 bg-brand-surface hover:bg-brand-surfaceLight cursor-pointer transition-colors"
+            data-openride-payment-option="cash"
+          >
+            <input type="radio" name="payment" value="cash" className="custom-radio" />
+            <div className="flex-1 flex justify-between items-center">
+              <div>
+                <span className="text-white font-medium block">Cash</span>
+                <span className="text-sm text-brand-textMuted">Payez directement au conducteur à bord</span>
+              </div>
+              <OpenRideIcon name="wallet" className="text-brand-accentGreen text-xl" />
+            </div>
+          </label>
         </div>
       </section>
     </div>

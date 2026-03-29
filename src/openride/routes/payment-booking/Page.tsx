@@ -128,7 +128,7 @@ const PaymentBookingPage = () => {
         }
 
         timeoutRef.current = window.setTimeout(() => {
-          const paymentValues: PaymentMethodId[] = ["card", "wallet", "paypal"];
+          const paymentValues: PaymentMethodId[] = ["card", "wallet", "paypal", "cash"];
           const readFieldValue = (name: string) => {
             const field = rootRef.current?.querySelector<
               HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
