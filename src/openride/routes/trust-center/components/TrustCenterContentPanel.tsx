@@ -87,7 +87,7 @@ const TrustCenterContentPanel = () => (
               <span className="status-badge-pending px-2.5 py-1 rounded-full text-xs font-medium">Optional</span>
             </div>
             <p className="text-sm text-gray-400 mb-4">Verify your ID to get a trusted badge and more ride matches.</p>
-            <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors border border-white/10">
+            <button type="button" className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors border border-white/10">
               Upload ID Document
             </button>
           </div>
@@ -103,7 +103,7 @@ const TrustCenterContentPanel = () => (
             <div className="space-y-3 mb-4">
               <label className="flex items-start gap-3 cursor-pointer group">
                 <div className="relative flex-shrink-0 mt-0.5">
-                  <input type="checkbox" className="sr-only peer" />
+                  <input name="guidelineRespect" type="checkbox" className="sr-only peer" />
                   <div className="w-5 h-5 bg-gray-800 border border-gray-600 rounded peer-checked:bg-brand-accent peer-checked:border-brand-accent flex items-center justify-center transition-colors">
                     <OpenRideIcon name="check" className="text-white text-xs opacity-0 peer-checked:opacity-100" />
                   </div>
@@ -112,7 +112,7 @@ const TrustCenterContentPanel = () => (
               </label>
               <label className="flex items-start gap-3 cursor-pointer group">
                 <div className="relative flex-shrink-0 mt-0.5">
-                  <input type="checkbox" className="sr-only peer" />
+                  <input name="guidelineSafety" type="checkbox" className="sr-only peer" />
                   <div className="w-5 h-5 bg-gray-800 border border-gray-600 rounded peer-checked:bg-brand-accent peer-checked:border-brand-accent flex items-center justify-center transition-colors">
                     <OpenRideIcon name="check" className="text-white text-xs opacity-0 peer-checked:opacity-100" />
                   </div>
@@ -125,10 +125,10 @@ const TrustCenterContentPanel = () => (
       </div>
       {/* Footer Actions */}
       <div className="pt-6 border-t border-gray-800 mt-auto flex items-center justify-between gap-4 sticky bottom-0 bg-brand-surface py-4 z-20">
-        <button type="button" className="px-6 py-3.5 text-gray-400 font-medium hover:text-white transition-colors">
+        <button type="button" data-openride-trust-action="back" className="px-6 py-3.5 text-gray-400 font-medium hover:text-white transition-colors">
           Back
         </button>
-        <button type="button" className="flex-1 sm:flex-none bg-gradient-to-r from-brand-purple to-brand-accent hover:opacity-90 text-white font-semibold px-10 py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-brand-accent/20 flex justify-center items-center gap-2 group">
+        <button type="button" data-openride-trust-action="complete" className="flex-1 sm:flex-none bg-gradient-to-r from-brand-purple to-brand-accent hover:opacity-90 text-white font-semibold px-10 py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-brand-accent/20 flex justify-center items-center gap-2 group">
           Terminer
           <OpenRideIcon name="arrow-right" className="group-hover:translate-x-1 transition-transform" />
         </button>

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { preventDefaultSubmit, preventHashAnchor } from "@/openride/shared/navigation";
 import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
+import { useOpenRideWorkflow } from "@/openride/shared/workflows";
 import { AuthFormsPanel, AuthVisualPanel } from "./components";
 
 const authThemeId: OpenRideFixedThemeId = "auth-light";
@@ -18,6 +20,8 @@ function syncSimpleAuthView(root: HTMLDivElement | null, view: "login" | "signup
 const AuthPage = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"login" | "signup">("login");
+  const navigate = useNavigate();
+  const workflow = useOpenRideWorkflow();
 
   useEffect(() => {
     syncSimpleAuthView(rootRef.current, view);
@@ -31,10 +35,38 @@ const AuthPage = () => {
         preventHashAnchor(event);
         const target = event.target as HTMLElement | null;
         const toggle = target?.closest<HTMLElement>("[data-openride-toggle]")?.dataset.openrideToggle;
+        const submitAction =
+          target?.closest<HTMLElement>("[data-openride-auth-submit]")?.dataset.openrideAuthSubmit;
 
         if (toggle === "login" || toggle === "signup") {
           event.preventDefault();
           setView(toggle);
+          return;
+        }
+
+        if (submitAction === "login" || submitAction === "signup") {
+          event.preventDefault();
+          const form = rootRef.current?.querySelector<HTMLFormElement>(
+            `[data-openride-auth-form="${submitAction}"]`,
+          );
+
+          if (!form) {
+            return;
+          }
+
+          const formData = new FormData(form);
+          const payload = {
+            email: String(formData.get("email") ?? "").trim(),
+            firstName: String(formData.get("firstName") ?? "").trim(),
+            lastName: String(formData.get("lastName") ?? "").trim(),
+            phone: String(formData.get("phone") ?? "").trim(),
+          };
+          const nextRoute =
+            submitAction === "login"
+              ? workflow.login("classic", payload)
+              : workflow.signup("classic", payload);
+
+          navigate(nextRoute);
         }
       }}
       onSubmitCapture={preventDefaultSubmit}

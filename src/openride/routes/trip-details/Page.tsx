@@ -2,12 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { handleOpenRideRouteClick, preventDefaultSubmit } from "@/openride/shared/navigation";
+import { useOpenRideWorkflow } from "@/openride/shared/workflows";
 import { TripDetailsContent, TripDetailsHeader } from "./components";
 
 const TripDetailsPage = () => {
   const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
   const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
+  const workflow = useOpenRideWorkflow();
+  const updateBookingDraft = workflow.updateBookingDraft;
+  const bookingDraftRideId = workflow.bookingDraft.rideId;
+  const bookingDraftSeatCount = workflow.bookingDraft.seatCount;
+  const selectedRideId = workflow.selectedRide?.id ?? null;
 
   useEffect(() => {
     const root = rootRef.current;
@@ -20,6 +26,20 @@ const TripDetailsPage = () => {
       button.classList.toggle("selected", selectedSeats.includes(index));
     });
   }, [selectedSeats]);
+
+  useEffect(() => {
+    const nextSeatCount = Math.max(selectedSeats.length, 1);
+
+    if (
+      selectedRideId &&
+      (bookingDraftRideId !== selectedRideId || bookingDraftSeatCount !== nextSeatCount)
+    ) {
+      updateBookingDraft({
+        rideId: selectedRideId,
+        seatCount: nextSeatCount,
+      });
+    }
+  }, [bookingDraftRideId, bookingDraftSeatCount, selectedRideId, selectedSeats, updateBookingDraft]);
 
   return (
     <OpenRidePageFrame

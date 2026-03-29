@@ -20,7 +20,7 @@ const AuthenticationHubFormsPanel = () => (
     <div id="login-view" className="w-full max-w-md mx-auto lg:mx-0 transition-all duration-500">
       <h1 className="text-3xl sm:text-4xl font-semibold text-white mb-2">Welcome back</h1>
       <p className="text-gray-400 mb-8">Enter your details to access your account.</p>
-      <form className="space-y-5">
+      <form className="space-y-5" data-openride-auth-form="login">
         {/* Email Input */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-gray-300">Email</label>
@@ -28,7 +28,7 @@ const AuthenticationHubFormsPanel = () => (
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <OpenRideIcon name="envelope" className="text-gray-400" />
             </div>
-            <input type="email" placeholder="john.doe@example.com" className="w-full pl-11 pr-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
+            <input name="email" type="email" placeholder="john.doe@example.com" className="w-full pl-11 pr-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
           </div>
         </div>
         {/* Password Input */}
@@ -41,14 +41,14 @@ const AuthenticationHubFormsPanel = () => (
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <OpenRideIcon name="lock" className="text-gray-400" />
             </div>
-            <input type="password" placeholder="••••••••••••••••" className="w-full pl-11 pr-12 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
+            <input name="password" type="password" placeholder="••••••••••••••••" className="w-full pl-11 pr-12 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
             <button type="button" className="absolute right-4 top-3.5 text-gray-400 hover:text-white transition-colors">
               <OpenRideIcon name="eye-slash" />
             </button>
           </div>
         </div>
         {/* Submit Button */}
-        <button type="button" className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-4 rounded-xl transition-all duration-300 mt-6 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)] flex justify-center items-center gap-2 group">
+        <button type="button" data-openride-auth-submit="login" className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-4 rounded-xl transition-all duration-300 mt-6 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)] flex justify-center items-center gap-2 group">
           Sign In
           <OpenRideIcon name="arrow-right" className="group-hover:translate-x-1 transition-transform" />
         </button>
@@ -76,18 +76,18 @@ const AuthenticationHubFormsPanel = () => (
     <div id="signup-view" className="w-full max-w-md mx-auto lg:mx-0 transition-all duration-500 hidden">
       <h1 className="text-3xl sm:text-4xl font-semibold text-white mb-2">Create an account</h1>
       <p className="text-gray-400 mb-8">Join thousands of smart travelers today.</p>
-      <form className="space-y-5">
+      <form className="space-y-5" data-openride-auth-form="signup">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-gray-300">First Name</label>
             <div className="relative input-field rounded-xl">
-              <input type="text" placeholder="John" className="w-full px-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
+              <input name="firstName" type="text" placeholder="John" className="w-full px-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
             </div>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-gray-300">Last Name</label>
             <div className="relative input-field rounded-xl">
-              <input type="text" placeholder="Doe" className="w-full px-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
+              <input name="lastName" type="text" placeholder="Doe" className="w-full px-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
             </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ const AuthenticationHubFormsPanel = () => (
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <OpenRideIcon name="envelope" className="text-gray-400" />
             </div>
-            <input type="email" placeholder="john.doe@example.com" className="w-full pl-11 pr-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
+            <input name="email" type="email" placeholder="john.doe@example.com" className="w-full pl-11 pr-4 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
           </div>
         </div>
         <div className="space-y-1.5">
@@ -106,7 +106,7 @@ const AuthenticationHubFormsPanel = () => (
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <OpenRideIcon name="lock" className="text-gray-400" />
             </div>
-            <input type="password" placeholder="••••••••••••••••" className="w-full pl-11 pr-12 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
+            <input name="password" type="password" placeholder="••••••••••••••••" className="w-full pl-11 pr-12 py-3.5 rounded-xl focus:outline-none text-white bg-transparent placeholder-gray-500" required />
             <button type="button" className="absolute right-4 top-3.5 text-gray-400 hover:text-white transition-colors">
               <OpenRideIcon name="eye-slash" />
             </button>
@@ -124,7 +124,7 @@ const AuthenticationHubFormsPanel = () => (
           <input type="checkbox" className="mt-1 w-4 h-4 rounded border-gray-600 bg-transparent text-brand-accent focus:ring-brand-accent/50 focus:ring-offset-0 focus:ring-2 cursor-pointer" required />
           <span className="text-gray-400 leading-relaxed">I agree to the <a href="#" className="text-white hover:text-brand-accent transition-colors underline decoration-white/30">Terms of Service</a> and <a href="#" className="text-white hover:text-brand-accent transition-colors underline decoration-white/30">Privacy Policy</a></span>
         </div>
-        <button type="button" className="w-full bg-brand-accent hover:bg-brand-purpleLight text-white font-semibold py-4 rounded-xl transition-all duration-300 mt-6 shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] flex justify-center items-center gap-2 group">
+        <button type="button" data-openride-auth-submit="signup" className="w-full bg-brand-accent hover:bg-brand-purpleLight text-white font-semibold py-4 rounded-xl transition-all duration-300 mt-6 shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] flex justify-center items-center gap-2 group">
           Create Account
           <OpenRideIcon name="arrow-right" className="group-hover:translate-x-1 transition-transform" />
         </button>

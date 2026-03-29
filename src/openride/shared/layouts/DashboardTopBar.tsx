@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { OpenRideIcon } from "@/openride/shared/icons";
+import { useOpenRideWorkflow } from "@/openride/shared/workflows";
 
 type DashboardTopBarProps = {
   actions?: ReactNode;
@@ -132,6 +133,9 @@ export function DashboardTopBarProfileChip({
   rating = "4.8",
   subtitle,
 }: DashboardTopBarProfileChipProps) {
+  const workflow = useOpenRideWorkflow();
+  const avatarAlt = workflow.user?.fullName ?? name;
+
   return (
     <div className="ml-2 flex cursor-pointer items-center gap-3 rounded-lg border-l border-white/10 p-1.5 pl-4 transition-colors hover:bg-white/5">
       <div className="hidden text-right lg:block">
@@ -141,7 +145,7 @@ export function DashboardTopBarProfileChip({
       <div className="relative">
         <img
           src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-          alt="Profile"
+          alt={avatarAlt}
           className="h-9 w-9 rounded-full border border-white/20"
         />
         <div className="absolute -bottom-1 -right-1 rounded-full border border-brand-background bg-brand-error px-1 text-[9px] font-bold text-white">
@@ -161,6 +165,13 @@ export function DashboardTopBarActionGroup({
   searchShortcut,
   searchWidthClassName,
 }: DashboardTopBarActionGroupProps) {
+  const workflow = useOpenRideWorkflow();
+  const unreadCount = workflow.conversations.filter((conversation) => conversation.unread).length;
+  const displayName = workflow.user?.fullName || profileName;
+  const subtitle =
+    workflow.user?.memberSince ? `Membre depuis ${workflow.user.memberSince}` : profileSubtitle;
+  const rating = workflow.user?.rating ? workflow.user.rating.toFixed(1) : "4.8";
+
   return (
     <div className="flex min-w-0 items-center gap-3">
       {searchPlaceholder ? (
@@ -180,11 +191,13 @@ export function DashboardTopBarActionGroup({
 
         <button className="relative flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-brand-surface px-3 text-gray-400 transition-colors hover:text-white" type="button">
           <OpenRideIcon name="bell" className="text-sm" />
-          <span className="rounded-full bg-brand-error px-1.5 text-[10px] text-white">2 New</span>
+          <span className="rounded-full bg-brand-error px-1.5 text-[10px] text-white">
+            {unreadCount} New
+          </span>
         </button>
       </div>
 
-      <DashboardTopBarProfileChip name={profileName} subtitle={profileSubtitle} />
+      <DashboardTopBarProfileChip name={displayName} rating={rating} subtitle={subtitle} />
     </div>
   );
 }

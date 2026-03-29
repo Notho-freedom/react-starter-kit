@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { preventDefaultSubmit, preventHashAnchor } from "@/openride/shared/navigation";
 import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
+import { useOpenRideWorkflow } from "@/openride/shared/workflows";
 import { AuthenticationHubFormsPanel, AuthenticationHubVisualPanel } from "./components";
 
 const authHubThemeId: OpenRideFixedThemeId = "auth-dark";
@@ -33,6 +35,8 @@ function syncHubAuthView(root: HTMLDivElement | null, view: "login" | "signup") 
 const AuthenticationHubPage = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"login" | "signup">("login");
+  const navigate = useNavigate();
+  const workflow = useOpenRideWorkflow();
 
   useEffect(() => {
     syncHubAuthView(rootRef.current, view);
@@ -46,10 +50,37 @@ const AuthenticationHubPage = () => {
         preventHashAnchor(event);
         const target = event.target as HTMLElement | null;
         const toggle = target?.closest<HTMLElement>("[data-openride-toggle]")?.dataset.openrideToggle;
+        const submitAction =
+          target?.closest<HTMLElement>("[data-openride-auth-submit]")?.dataset.openrideAuthSubmit;
 
         if (toggle === "login" || toggle === "signup") {
           event.preventDefault();
           setView(toggle);
+          return;
+        }
+
+        if (submitAction === "login" || submitAction === "signup") {
+          event.preventDefault();
+          const form = rootRef.current?.querySelector<HTMLFormElement>(
+            `[data-openride-auth-form="${submitAction}"]`,
+          );
+
+          if (!form) {
+            return;
+          }
+
+          const formData = new FormData(form);
+          const payload = {
+            email: String(formData.get("email") ?? "").trim(),
+            firstName: String(formData.get("firstName") ?? "").trim(),
+            lastName: String(formData.get("lastName") ?? "").trim(),
+          };
+          const nextRoute =
+            submitAction === "login"
+              ? workflow.login("premium", payload)
+              : workflow.signup("premium", payload);
+
+          navigate(nextRoute);
         }
       }}
       onSubmitCapture={preventDefaultSubmit}

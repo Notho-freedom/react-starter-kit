@@ -4,6 +4,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { RideShareLogoIcon } from "@/openride/shared/icons";
 import { dashboardNavItems, type DashboardNavKey } from "@/openride/shared/navigation";
+import { useOpenRideWorkflow } from "@/openride/shared/workflows";
 
 type DashboardShellProps = {
   activeItem: DashboardNavKey;
@@ -18,6 +19,8 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const workflow = useOpenRideWorkflow();
+  const unreadCount = workflow.conversations.filter((conversation) => conversation.unread).length;
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -75,6 +78,7 @@ export function DashboardShell({
           {mainItems.map((item) => {
             const Icon = item.icon;
             const isCurrent = item.key === activeItem;
+            const badge = item.key === "messages" && unreadCount > 0 ? String(unreadCount) : item.badge;
 
             return (
               <NavLink
@@ -92,9 +96,9 @@ export function DashboardShell({
               >
                 <Icon className={cn("h-5 w-5", isCurrent ? "text-brand-purpleLight" : "")} />
                 <span className="font-medium">{item.label}</span>
-                {item.badge ? (
+                {badge ? (
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-brand-accent px-2 py-0.5 text-[10px] font-bold text-white">
-                    {item.badge}
+                    {badge}
                   </span>
                 ) : null}
               </NavLink>
@@ -132,12 +136,16 @@ export function DashboardShell({
           <NavLink to="/profile-settings" className="glass-card flex items-center gap-3 rounded-xl p-3">
             <img
               src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-              alt="User Profile"
+              alt={workflow.user?.fullName ?? "User Profile"}
               className="h-10 w-10 rounded-full border border-brand-purple/30"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">Devon Lane</p>
-              <p className="truncate text-xs text-brand-purpleLight">Verified Member</p>
+              <p className="truncate text-sm font-medium text-white">
+                {workflow.user?.fullName ?? "Devon Lane"}
+              </p>
+              <p className="truncate text-xs text-brand-purpleLight">
+                {workflow.trustCompleted ? "Verified Member" : "Vérification requise"}
+              </p>
             </div>
             <ChevronRight className="h-4 w-4 text-gray-500" />
           </NavLink>
