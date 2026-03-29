@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['"Inter"', "sans-serif"],
+        serif: ['"Playfair Display"', "serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -38,6 +42,8 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          light: "rgb(var(--accent-light) / <alpha-value>)",
+          dark: "rgb(var(--accent-dark) / <alpha-value>)",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -56,6 +62,26 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        brand: {
+          dark: "rgb(var(--brand-dark) / <alpha-value>)",
+          background: "rgb(var(--brand-background) / <alpha-value>)",
+          surface: "rgb(var(--brand-surface) / <alpha-value>)",
+          surfaceLight: "rgb(var(--brand-surface-light) / <alpha-value>)",
+          purple: "rgb(var(--brand-purple) / <alpha-value>)",
+          purpleLight: "rgb(var(--brand-purple-light) / <alpha-value>)",
+          accent: "rgb(var(--brand-accent) / <alpha-value>)",
+          green: "rgb(var(--brand-green) / <alpha-value>)",
+          blue: "rgb(var(--brand-blue) / <alpha-value>)",
+          accentGreen: "rgb(var(--brand-accent-green) / <alpha-value>)",
+          accentYellow: "rgb(var(--brand-accent-yellow) / <alpha-value>)",
+          accentPurple: "rgb(var(--brand-accent-purple) / <alpha-value>)",
+          accentPurpleDark: "rgb(var(--brand-accent-purple-dark) / <alpha-value>)",
+          text: "rgb(var(--brand-text) / <alpha-value>)",
+          textMuted: "rgb(var(--brand-text-muted) / <alpha-value>)",
+          error: "rgb(var(--brand-error) / <alpha-value>)",
+          success: "rgb(var(--brand-success) / <alpha-value>)",
+          warning: "rgb(var(--brand-warning) / <alpha-value>)",
         },
       },
       borderRadius: {
