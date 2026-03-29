@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { OpenRideIcon } from "@/openride/shared/icons";
 import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useAuth } from "@/openride/shared/auth";
 
 function ProfileSettingsSidebar() {
   const navigate = useNavigate();
   const workflow = useOpenRideWorkflow();
+  const { signOut } = useAuth();
   const user = workflow.user;
 
   return (
