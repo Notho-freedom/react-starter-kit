@@ -8,7 +8,15 @@ export type TripViewTab = "upcoming" | "past" | "cancelled";
 
 export type TripViewRole = "passenger" | "driver";
 
-export type PaymentMethodId = "card" | "wallet" | "paypal";
+export type PublishMode = "planned-ride" | "availability";
+
+export type SearchMode = "find-rides" | "post-request";
+
+export type MyTripsCollection = "bookings" | "requests" | "trips" | "availabilities";
+
+export type MyTripsStatusTab = "upcoming" | "past" | "cancelled" | "active" | "fulfilled";
+
+export type PaymentMethodId = "card" | "wallet" | "paypal" | "cash";
 
 export type VerificationState = {
   emailVerified: boolean;
@@ -100,7 +108,7 @@ export type BookingDraft = {
 
 export type BookingStatus = "confirmed" | "pending" | "cancelled";
 
-export type PaymentStatus = "authorized" | "paid";
+export type PaymentStatus = "authorized" | "paid" | "cash_pending";
 
 export type PassengerTrip = {
   departureLabel: string;
@@ -144,6 +152,76 @@ export type PublishDraft = {
   vehicleName: string;
 };
 
+export type DriverAvailabilityStatus = "active" | "fulfilled" | "cancelled";
+
+export type RiderRequestStatus = "active" | "fulfilled" | "cancelled";
+
+export type DriverAvailabilityDraft = {
+  date: string;
+  endTime: string;
+  notes: string;
+  seats: number;
+  startTime: string;
+  vehicleName: string;
+  zone: string;
+};
+
+export type DriverAvailabilityPost = {
+  date: string;
+  driverAvatar: string;
+  driverName: string;
+  driverRating: number;
+  id: string;
+  kind: DriverAvailabilityStatus;
+  notes: string;
+  routeLabel: string;
+  seats: number;
+  timeWindow: string;
+  vehicleName: string;
+  zone: string;
+};
+
+export type RiderRequestDraft = {
+  date: string;
+  destination: string;
+  notes: string;
+  origin: string;
+  seatCount: number;
+  startTime: string;
+  endTime: string;
+};
+
+export type RiderRequestPost = {
+  date: string;
+  destination: string;
+  id: string;
+  kind: RiderRequestStatus;
+  notes: string;
+  origin: string;
+  passengerAvatar: string;
+  passengerName: string;
+  routeLabel: string;
+  seatCount: number;
+  timeWindow: string;
+};
+
+export type MatchContextType = "ride" | "availability" | "request";
+
+export type MatchSuggestion = {
+  contextId: string;
+  contextType: MatchContextType;
+  counterpartAvatar: string;
+  counterpartName: string;
+  counterpartRoleLabel: string;
+  id: string;
+  metaLabel: string;
+  priceLabel?: string;
+  routeLabel: string;
+  secondaryLabel: string;
+  statusLabel: string;
+  title: string;
+};
+
 export type ConversationMessage = {
   attachmentImage?: string;
   attachmentLabel?: string;
@@ -154,10 +232,12 @@ export type ConversationMessage = {
 };
 
 export type Conversation = {
+  contextType: MatchContextType;
   id: string;
   isOnline: boolean;
   lastMessage: string;
   lastTimestamp: string;
+  messages: ConversationMessage[];
   participantAvatar: string;
   participantName: string;
   participantRoleLabel: string;
@@ -166,21 +246,26 @@ export type Conversation = {
   routeLabel: string;
   statusLabel: string;
   unread: boolean;
-  messages: ConversationMessage[];
 };
 
 export type OpenRideWorkflowState = {
   activeConversationId: string | null;
   authStatus: AuthStatus;
   authVariant: AuthVariant | null;
+  availabilityDraft: DriverAvailabilityDraft;
   bookingDraft: BookingDraft;
   conversations: Conversation[];
+  driverAvailabilities: DriverAvailabilityPost[];
   onboardingStep: OnboardingStep;
   passengerTrips: PassengerTrip[];
   profileCompleted: boolean;
   publishDraft: PublishDraft;
+  publishMode: PublishMode;
   publishedTrips: PublishedTrip[];
+  rideRequestDraft: RiderRequestDraft;
+  rideRequests: RiderRequestPost[];
   rides: Ride[];
+  searchMode: SearchMode;
   selectedRideId: string | null;
   trustCompleted: boolean;
   user: UserProfile | null;

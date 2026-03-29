@@ -1,13 +1,33 @@
 import type {
   BookingDraft,
   Conversation,
+  DriverAvailabilityDraft,
+  DriverAvailabilityPost,
   OpenRideWorkflowState,
   PassengerTrip,
   PublishDraft,
   PublishedTrip,
   Ride,
+  RiderRequestDraft,
+  RiderRequestPost,
   UserProfile,
 } from "./types";
+
+export function formatTimeWindow(startTime: string, endTime: string) {
+  if (startTime && endTime) {
+    return `${startTime} - ${endTime}`;
+  }
+
+  if (startTime) {
+    return `À partir de ${startTime}`;
+  }
+
+  if (endTime) {
+    return `Jusqu'à ${endTime}`;
+  }
+
+  return "Horaire flexible";
+}
 
 export const defaultUserProfile: UserProfile = {
   ageLabel: "28 ans",
@@ -191,6 +211,26 @@ export const defaultPublishDraft: PublishDraft = {
   vehicleName: "Peugeot 3008",
 };
 
+export const defaultAvailabilityDraft: DriverAvailabilityDraft = {
+  date: "",
+  endTime: "18:00",
+  notes: "Disponible pour des courses interurbaines ou des trajets ponctuels.",
+  seats: 3,
+  startTime: "08:00",
+  vehicleName: "Peugeot 3008",
+  zone: "Montréal",
+};
+
+export const defaultRideRequestDraft: RiderRequestDraft = {
+  date: "",
+  destination: "Montréal",
+  notes: "Je voyage léger, un sac cabine seulement.",
+  origin: "Ottawa",
+  seatCount: 1,
+  startTime: "08:00",
+  endTime: "11:00",
+};
+
 export const passengerTripsSeed: PassengerTrip[] = [
   {
     departureLabel: "Demain, 08:00",
@@ -237,8 +277,82 @@ export const publishedTripsSeed: PublishedTrip[] = [
   },
 ];
 
+export const driverAvailabilitiesSeed: DriverAvailabilityPost[] = [
+  {
+    date: "2026-03-30",
+    driverAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-10.jpg",
+    driverName: "Awa N.",
+    driverRating: 4.9,
+    id: "availability-montreal-all-day",
+    kind: "active",
+    notes: "Disponible pour des trajets à la demande autour de Montréal toute la journée.",
+    routeLabel: "Disponible depuis Montréal",
+    seats: 3,
+    timeWindow: formatTimeWindow("08:00", "18:00"),
+    vehicleName: "Toyota RAV4",
+    zone: "Montréal",
+  },
+  {
+    date: "2026-03-30",
+    driverAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-11.jpg",
+    driverName: "Samuel K.",
+    driverRating: 4.7,
+    id: "availability-ottawa-evening",
+    kind: "active",
+    notes: "Libre en fin d'après-midi pour Ottawa, Gatineau et les alentours.",
+    routeLabel: "Disponible depuis Ottawa",
+    seats: 2,
+    timeWindow: formatTimeWindow("16:00", "22:00"),
+    vehicleName: "Honda Civic",
+    zone: "Ottawa",
+  },
+];
+
+export const rideRequestsSeed: RiderRequestPost[] = [
+  {
+    date: "2026-03-30",
+    destination: "Montréal",
+    id: "request-ottawa-montreal",
+    kind: "active",
+    notes: "Départ flexible en matinée, petit sac cabine.",
+    origin: "Ottawa",
+    passengerAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg",
+    passengerName: "Chloé R.",
+    routeLabel: "Ottawa → Montréal",
+    seatCount: 1,
+    timeWindow: formatTimeWindow("08:00", "11:00"),
+  },
+  {
+    date: "2026-03-30",
+    destination: "Montréal",
+    id: "request-cornwall-montreal",
+    kind: "active",
+    notes: "Je peux me déplacer jusqu'à un point de rendez-vous sur la route.",
+    origin: "Cornwall",
+    passengerAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg",
+    passengerName: "Nadia T.",
+    routeLabel: "Cornwall → Montréal",
+    seatCount: 2,
+    timeWindow: formatTimeWindow("10:00", "14:00"),
+  },
+  {
+    date: "2026-03-29",
+    destination: "Gatineau",
+    id: "request-gatineau-night",
+    kind: "fulfilled",
+    notes: "Trajet trouvé pour ce soir.",
+    origin: "Montréal",
+    passengerAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg",
+    passengerName: "Léa M.",
+    routeLabel: "Montréal → Gatineau",
+    seatCount: 1,
+    timeWindow: formatTimeWindow("18:00", "21:00"),
+  },
+];
+
 export const conversationsSeed: Conversation[] = [
   {
+    contextType: "ride",
     id: "conversation-ride-paris-lyon",
     isOnline: true,
     lastMessage: "Parfait, on se retrouve devant la gare !",
@@ -287,6 +401,7 @@ export const conversationsSeed: Conversation[] = [
     ],
   },
   {
+    contextType: "ride",
     id: "conversation-ride-bordeaux-toulouse",
     isOnline: false,
     lastMessage: "Est-ce que vous avez de la place pour un grand sac ?",
@@ -309,24 +424,25 @@ export const conversationsSeed: Conversation[] = [
     ],
   },
   {
-    id: "conversation-ride-paris-lyon-alt",
-    isOnline: false,
-    lastMessage: "Merci pour le trajet, c'était super !",
-    lastTimestamp: "Lun",
-    participantAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg",
-    participantName: "Lucas Martin",
-    participantRoleLabel: "Passager",
-    paymentStateLabel: "Terminé",
-    rideId: "ride-paris-lyon-alt",
-    routeLabel: "Paris → Lyon",
-    statusLabel: "Terminée",
+    contextType: "availability",
+    id: "conversation-availability-montreal-all-day",
+    isOnline: true,
+    lastMessage: "Je suis libre en matinée si vous voulez confirmer.",
+    lastTimestamp: "09:10",
+    participantAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-10.jpg",
+    participantName: "Awa N.",
+    participantRoleLabel: "Conductrice disponible",
+    paymentStateLabel: "À définir",
+    rideId: "availability-montreal-all-day",
+    routeLabel: "Disponible depuis Montréal",
+    statusLabel: "Disponibilité active",
     unread: false,
     messages: [
       {
-        id: "message-7",
+        id: "message-8",
         sender: "them",
-        text: "Merci pour le trajet, c'était super !",
-        timestamp: "Lun",
+        text: "Je suis libre en matinée si vous voulez confirmer.",
+        timestamp: "09:10",
       },
     ],
   },
@@ -339,14 +455,20 @@ export function createInitialWorkflowState(): OpenRideWorkflowState {
     activeConversationId: conversationsSeed[0].id,
     authStatus: "anonymous",
     authVariant: null,
+    availabilityDraft: defaultAvailabilityDraft,
     bookingDraft: defaultBookingDraft(ridesSeed[0].id),
     conversations: conversationsSeed,
+    driverAvailabilities: driverAvailabilitiesSeed,
     onboardingStep: "complete",
     passengerTrips: passengerTripsSeed,
     profileCompleted: true,
     publishDraft: defaultPublishDraft,
+    publishMode: "planned-ride",
     publishedTrips: publishedTripsSeed,
+    rideRequestDraft: defaultRideRequestDraft,
+    rideRequests: rideRequestsSeed,
     rides: ridesSeed,
+    searchMode: "find-rides",
     selectedRideId: ridesSeed[0].id,
     trustCompleted: true,
     user: defaultUserProfile,

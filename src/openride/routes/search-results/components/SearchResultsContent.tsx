@@ -1,11 +1,21 @@
+import { useOpenRideWorkflow } from "@/openride/shared/workflows";
 import RideResultsList from "./RideResultsList";
 import MapPanel from "./MapPanel";
+import RideRequestComposer from "./RideRequestComposer";
 
-const SearchResultsContent = () => (
-  <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-    <RideResultsList />
-    <MapPanel />
-  </div>
-);
+const SearchResultsContent = () => {
+  const workflow = useOpenRideWorkflow();
+
+  if (workflow.searchMode === "post-request") {
+    return <RideRequestComposer />;
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+      <RideResultsList />
+      <MapPanel />
+    </div>
+  );
+};
 
 export default SearchResultsContent;

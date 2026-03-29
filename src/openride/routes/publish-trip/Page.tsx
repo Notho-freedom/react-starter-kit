@@ -24,12 +24,20 @@ const PublishTripPage = () => {
 
         if (seatAction === "increment" || seatAction === "decrement") {
           event.preventDefault();
-          const currentSeats = workflow.publishDraft.seats;
+          const currentSeats =
+            workflow.publishMode === "availability"
+              ? workflow.availabilityDraft.seats
+              : workflow.publishDraft.seats;
           const nextSeats =
             seatAction === "increment"
               ? Math.min(currentSeats + 1, 4)
               : Math.max(currentSeats - 1, 1);
-          workflow.savePublishDraft({ seats: nextSeats });
+
+          if (workflow.publishMode === "availability") {
+            workflow.saveAvailabilityDraft({ seats: nextSeats });
+          } else {
+            workflow.savePublishDraft({ seats: nextSeats });
+          }
           return;
         }
 
@@ -56,7 +64,33 @@ const PublishTripPage = () => {
 
           return field.value;
         };
-        const payload = {
+        if (workflow.publishMode === "availability") {
+          const availabilityPayload = {
+            date: readFieldValue("availabilityDate") || workflow.availabilityDraft.date,
+            endTime:
+              readFieldValue("availabilityEndTime") || workflow.availabilityDraft.endTime,
+            notes: readFieldValue("availabilityNotes") || workflow.availabilityDraft.notes,
+            seats: workflow.availabilityDraft.seats,
+            startTime:
+              readFieldValue("availabilityStartTime") ||
+              workflow.availabilityDraft.startTime,
+            vehicleName:
+              readFieldValue("availabilityVehicleName") ||
+              workflow.availabilityDraft.vehicleName,
+            zone: readFieldValue("availabilityZone") || workflow.availabilityDraft.zone,
+          };
+
+          if (action === "save-draft") {
+            workflow.saveAvailabilityDraft(availabilityPayload);
+            return;
+          }
+
+          workflow.publishAvailability(availabilityPayload);
+          navigate("/my-trips");
+          return;
+        }
+
+        const tripPayload = {
           date: readFieldValue("date") || workflow.publishDraft.date,
           departure: readFieldValue("departure") || workflow.publishDraft.departure,
           destination: readFieldValue("destination") || workflow.publishDraft.destination,
@@ -71,11 +105,11 @@ const PublishTripPage = () => {
         };
 
         if (action === "save-draft") {
-          workflow.savePublishDraft(payload);
+          workflow.savePublishDraft(tripPayload);
           return;
         }
 
-        workflow.publishTrip(payload);
+        workflow.publishTrip(tripPayload);
         navigate("/my-trips");
       }}
       onSubmitCapture={preventDefaultSubmit}
