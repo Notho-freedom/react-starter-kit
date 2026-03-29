@@ -121,7 +121,7 @@ function TripsList({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      onMessage(item.rideId);
+                      onMessage((item as PassengerTrip).rideId);
                     }}
                   >
                     Message
