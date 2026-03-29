@@ -132,8 +132,8 @@ function ProfileSettingsSidebar() {
           </button>
           <button
             className="mt-4 flex items-center gap-3 px-4 py-3 rounded-lg text-left w-full text-brand-error hover:bg-brand-error/10 transition-colors"
-            onClick={() => {
-              workflow.logout();
+            onClick={async () => {
+              await signOut();
               navigate("/auth");
             }}
             type="button"
