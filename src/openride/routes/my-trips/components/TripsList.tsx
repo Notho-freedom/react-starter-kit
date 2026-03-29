@@ -169,7 +169,7 @@ function TripsList({
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-gray-500">Véhicule</p>
-                    <span className="text-sm text-gray-300">{item.vehicleName}</span>
+                    <span className="text-sm text-gray-300">{(item as PublishedTrip).vehicleName}</span>
                   </div>
                 </div>
 
