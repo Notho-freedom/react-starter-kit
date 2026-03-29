@@ -1,70 +1,96 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { OpenRideIcon } from "@/openride/shared/icons";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+
+const MAPBOX_TOKEN = "pk.eyJ1IjoicmF2ZWxtb21vIiwiYSI6ImNtaXZnb3ZjNzBoY3gzZHBmbzhnNDJneDkifQ.RPXItFtVT4sQ5Vlx2GoQIg";
 
 function MapPanel() {
   const navigate = useNavigate();
   const workflow = useOpenRideWorkflow();
   const selectedRide = workflow.selectedRide ?? workflow.searchRides[0];
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: "mapbox://styles/mapbox/dark-v11",
+      center: [2.3522, 48.8566], // Paris default
+      zoom: 5,
+      attributionControl: false,
+    });
+
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Update markers when rides change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear existing markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    const bounds = new mapboxgl.LngLatBounds();
+    let hasCoords = false;
+
+    // Add markers for rides with coordinates (from Supabase)
+    workflow.searchRides.forEach((ride) => {
+      // Try to use stored coordinates
+      const lat = (ride as Record<string, unknown>).departure_lat as number | undefined;
+      const lng = (ride as Record<string, unknown>).departure_lng as number | undefined;
+
+      if (lat && lng) {
+        hasCoords = true;
+        const isSelected = ride.id === selectedRide?.id;
+
+        const el = document.createElement("div");
+        el.className = `flex flex-col items-center cursor-pointer`;
+        el.innerHTML = `
+          <div class="px-3 py-1 rounded-full text-xs font-bold text-white mb-1 shadow-lg ${
+            isSelected
+              ? "bg-[#8B5CF6] border border-purple-400"
+              : "bg-[#1E293B] border border-gray-600 opacity-80"
+          }">${ride.priceLabel}</div>
+          <div class="w-3 h-3 rounded-full ${isSelected ? "bg-[#8B5CF6]" : "bg-gray-400"} border-2 border-white shadow"></div>
+        `;
+        el.addEventListener("click", () => {
+          workflow.setSelectedRide(ride.id);
+          navigate("/trip-details");
+        });
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .addTo(map);
+        markersRef.current.push(marker);
+        bounds.extend([lng, lat]);
+      }
+    });
+
+    // If we have real coordinates, fit bounds
+    if (hasCoords) {
+      map.fitBounds(bounds, { padding: 80, maxZoom: 12 });
+    }
+  }, [workflow.searchRides, selectedRide?.id, navigate, workflow]);
 
   return (
     <div className="hidden lg:block w-7/12 xl:w-1/2 relative h-full border-l border-gray-800/50">
-      <div className="absolute inset-0 bg-[#0B0F19] z-0">
-        <img
-          className="w-full h-full object-cover opacity-70 mix-blend-screen"
-          src={selectedRide?.mapImage}
-          alt="detailed dark mode map showing routes and pins"
-        />
-      </div>
-
-      <div className="absolute top-6 right-6 z-10 flex flex-col gap-2">
-        <button className="w-10 h-10 glass-card rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors shadow-lg shadow-black/50">
-          <OpenRideIcon name="plus" className="text-white" />
-        </button>
-        <button className="w-10 h-10 glass-card rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors shadow-lg shadow-black/50">
-          <OpenRideIcon name="minus" className="text-white" />
-        </button>
-        <button className="w-10 h-10 glass-card rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors shadow-lg shadow-black/50 mt-4">
-          <OpenRideIcon name="location-crosshairs" className="text-brand-purpleLight" />
-        </button>
-      </div>
-
-      <div className="absolute inset-0 z-10 pointer-events-none">
-        {workflow.searchRides.map((ride, index) => {
-          const positions = [
-            "top-[30%] left-[40%]",
-            "top-[45%] left-[25%]",
-            "top-[20%] left-[60%]",
-          ];
-          const isSelected = ride.id === selectedRide?.id;
-
-          return (
-            <div
-              key={ride.id}
-              className={`absolute ${positions[index] ?? positions[0]} flex flex-col items-center pointer-events-auto cursor-pointer group`}
-              onClick={() => workflow.setSelectedRide(ride.id)}
-            >
-              <div className={`bg-brand-surfaceLight px-3 py-1 rounded-full text-xs font-bold text-white mb-1 shadow-lg ${isSelected ? "border border-brand-purple opacity-100" : "border border-gray-600 opacity-0 group-hover:opacity-100"} transition-opacity`}>
-                {ride.priceLabel}
-              </div>
-              <div className={`map-marker ${isSelected ? "active" : ""}`}>
-                <OpenRideIcon name="car" className="text-xs" />
-              </div>
-            </div>
-          );
-        })}
-
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: -1 }}>
-          <path
-            d="M 300 250 Q 400 350 500 500"
-            fill="none"
-            stroke="#8B5CF6"
-            strokeWidth={3}
-            strokeDasharray="5,5"
-            className="opacity-50"
-          />
-        </svg>
-      </div>
+      <div ref={mapContainerRef} className="absolute inset-0" />
 
       {selectedRide ? (
         <div className="absolute bottom-6 left-6 right-6 z-20 pointer-events-none">
@@ -101,7 +127,7 @@ function MapPanel() {
               onClick={() => navigate("/trip-details")}
               type="button"
             >
-              <OpenRideIcon name="chevron-right" />
+              →
             </button>
           </div>
         </div>
