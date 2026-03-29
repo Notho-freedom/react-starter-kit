@@ -111,7 +111,7 @@ function TripsList({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      onOpenDetails(item.rideId);
+                      onOpenDetails((item as PassengerTrip).rideId);
                     }}
                   >
                     Voir détails
