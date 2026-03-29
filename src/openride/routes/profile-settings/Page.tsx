@@ -17,7 +17,7 @@ const ProfileSettingsPage = () => {
       title="Ride Sharing - Profil & Paramètres"
     >
       <DashboardShell activeItem="profileSettings" mobileMenuTone="surfaceLight">
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <ProfileSettingsHeader />
           <ProfileSettingsContent />
         </main>

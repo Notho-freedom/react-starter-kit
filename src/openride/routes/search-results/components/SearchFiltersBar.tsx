@@ -1,7 +1,7 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 
 const SearchFiltersBar = () => (
-<div id="sticky-filters" className="glass-panel border-b border-gray-800/50 px-6 py-4 z-30 flex items-center justify-between overflow-x-auto hide-scroll">
+<div id="sticky-filters" className="sticky top-20 z-30 flex items-center justify-between overflow-x-auto border-b border-gray-800/50 glass-panel px-6 py-4 hide-scroll">
     <div className="flex gap-3 min-w-max">
       <button className="glass-card px-4 py-2 rounded-full text-sm font-medium text-white flex items-center gap-2 border-brand-purple bg-brand-purple/10">
         <OpenRideIcon name="sort" /> Earliest Departure

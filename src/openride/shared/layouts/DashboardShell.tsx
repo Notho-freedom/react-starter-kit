@@ -38,10 +38,10 @@ export function DashboardShell({
       : "bg-brand-surface border-gray-800";
 
   return (
-    <>
+    <div className="flex min-h-screen w-full flex-col md:block">
       <aside
         id="sidebar-nav"
-        className="relative z-50 flex h-auto w-full flex-shrink-0 flex-col glass-panel border-r border-gray-800/50 md:h-screen md:w-64 lg:w-72"
+        className="relative z-50 flex h-auto w-full flex-shrink-0 flex-col glass-panel border-r border-gray-800/50 md:fixed md:inset-y-0 md:left-0 md:h-screen md:w-64 lg:w-72"
       >
         <div className="flex items-center gap-3 border-b border-gray-800/50 p-6">
           <RideShareLogoIcon />
@@ -144,7 +144,9 @@ export function DashboardShell({
         </div>
       </aside>
 
-      {children}
-    </>
+      <div className="min-h-0 flex-1 md:ml-64 md:h-screen lg:ml-72">
+        {children}
+      </div>
+    </div>
   );
 }

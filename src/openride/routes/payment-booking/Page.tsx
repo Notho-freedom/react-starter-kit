@@ -101,7 +101,7 @@ const PaymentBookingPage = () => {
       title="Ride Sharing - Paiement & Réservation"
     >
       <DashboardShell activeItem="myTrips">
-        <main ref={rootRef} className="flex-1 flex flex-col overflow-hidden">
+        <main ref={rootRef} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <PaymentBookingHeader />
           <PaymentBookingContent isProcessing={isProcessing} />
           <BookingSuccessModal isOpen={showSuccess} />

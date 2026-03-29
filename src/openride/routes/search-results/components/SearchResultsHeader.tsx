@@ -1,7 +1,7 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 
 const SearchResultsHeader = () => (
-<header id="top-header" className="h-20 glass-panel flex items-center justify-between px-6 lg:px-10 z-40 border-b border-gray-800/50">
+<header id="top-header" className="sticky top-0 z-40 h-20 shrink-0 glass-panel flex items-center justify-between border-b border-gray-800/50 px-6 lg:px-10">
     <div className="flex items-center gap-4">
       <h1 className="text-xl md:text-2xl font-semibold text-white">Résultats de Recherche</h1>
       <span className="hidden md:inline-flex items-center gap-2 px-3 py-1 bg-gray-800 text-gray-300 text-xs font-medium rounded-full border border-gray-700">

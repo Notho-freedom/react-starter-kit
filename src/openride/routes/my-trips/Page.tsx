@@ -17,7 +17,7 @@ const MyTripsPage = () => {
       title="Ride Sharing - Mes Trajets"
     >
       <DashboardShell activeItem="myTrips" mobileMenuTone="surfaceLight">
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <MyTripsHeader />
           <MyTripsContent />
         </main>

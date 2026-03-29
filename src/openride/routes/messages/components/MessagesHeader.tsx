@@ -1,7 +1,7 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 
 const MessagesHeader = () => (
-<header id="top-header" className="h-20 glass-panel flex items-center justify-between px-6 z-40 border-b border-gray-800/50 shrink-0">
+<header id="top-header" className="sticky top-0 z-40 h-20 shrink-0 glass-panel flex items-center justify-between border-b border-gray-800/50 px-6">
     <div className="flex items-center gap-4">
       <h1 className="text-xl md:text-2xl font-semibold text-white">Messages</h1>
     </div>

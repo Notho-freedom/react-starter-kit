@@ -17,7 +17,7 @@ const PublishTripPage = () => {
       title="Ride Sharing - Publier un Trajet"
     >
       <DashboardShell activeItem="publishTrip">
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <PublishTripHeader />
           <PublishTripContent />
         </main>

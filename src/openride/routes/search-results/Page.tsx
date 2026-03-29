@@ -17,7 +17,7 @@ const SearchResultsPage = () => {
       title="Ride Sharing - Résultats de Recherche"
     >
       <DashboardShell activeItem="searchResults">
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <SearchResultsHeader />
           <SearchFiltersBar />
           <SearchResultsContent />

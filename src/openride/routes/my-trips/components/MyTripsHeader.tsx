@@ -1,7 +1,7 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 
 const MyTripsHeader = () => (
-<header id="top-header" className="h-20 glass-panel border-b border-white/5 flex items-center justify-between px-6 lg:px-10 z-40 shrink-0">
+<header id="top-header" className="sticky top-0 z-40 h-20 shrink-0 glass-panel flex items-center justify-between border-b border-white/5 px-6 lg:px-10">
     <div className="flex flex-col">
       <h1 className="text-xl md:text-2xl font-semibold text-white">Mes Trajets</h1>
       <p className="text-xs text-gray-400">Gérez vos réservations et vos trajets publiés</p>

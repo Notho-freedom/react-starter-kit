@@ -1,7 +1,7 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 
 const PaymentBookingHeader = () => (
-<header id="top-header" className="h-20 glass-panel flex items-center justify-between px-6 lg:px-10 z-40 border-b border-gray-800/50">
+<header id="top-header" className="sticky top-0 z-40 h-20 shrink-0 glass-panel flex items-center justify-between border-b border-gray-800/50 px-6 lg:px-10">
     <div className="flex items-center gap-4">
       <button
         type="button"

@@ -57,7 +57,7 @@ const TripDetailsPage = () => {
       title="Ride Sharing - Détails du Trajet"
     >
       <DashboardShell activeItem="myTrips">
-        <main ref={rootRef} className="flex-1 flex flex-col overflow-hidden">
+        <main ref={rootRef} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <TripDetailsHeader />
           <TripDetailsContent />
         </main>
