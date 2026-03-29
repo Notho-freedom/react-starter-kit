@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { AuthShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import {
   handleOpenRideRouteClick,
@@ -6,14 +7,16 @@ import {
   preventHashAnchor,
 } from "@/openride/shared/navigation";
 import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
-import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useAuth } from "@/openride/shared/auth";
+import { useUpdateProfile } from "@/integrations/supabase/hooks";
 import { SetupProfileFormPanel, SetupProfileVisualPanel } from "./components";
 
 const setupThemeId: OpenRideFixedThemeId = "setup-light";
 
 const SetupProfilePage = () => {
   const navigate = useNavigate();
-  const workflow = useOpenRideWorkflow();
+  const { user } = useAuth();
+  const updateProfile = useUpdateProfile();
 
   return (
     <OpenRidePageFrame
@@ -38,20 +41,26 @@ const SetupProfilePage = () => {
         const formData = form ? new FormData(form) : new FormData();
         const phone = `${String(formData.get("phoneCountryCode") ?? "").replace(/\s*\(.+\)\s*/g, "").trim()} ${String(formData.get("phone") ?? "").trim()}`.trim();
 
-        workflow.completeSetupProfile({
-          currency: String(formData.get("currency") ?? "").trim() || workflow.user?.currency,
-          emergencyContactName:
-            String(formData.get("emergencyContactName") ?? "").trim() ||
-            workflow.user?.emergencyContactName,
-          emergencyContactPhone:
-            String(formData.get("emergencyContactPhone") ?? "").trim() ||
-            workflow.user?.emergencyContactPhone,
-          firstName: String(formData.get("firstName") ?? "").trim() || workflow.user?.firstName,
-          language: String(formData.get("language") ?? "").trim() || workflow.user?.language,
-          lastName: String(formData.get("lastName") ?? "").trim() || workflow.user?.lastName,
-          phone: phone || workflow.user?.phone,
+        const profileData = {
+          first_name: String(formData.get("firstName") ?? "").trim() || undefined,
+          last_name: String(formData.get("lastName") ?? "").trim() || undefined,
+          phone: phone || undefined,
+          currency: String(formData.get("currency") ?? "").trim() || undefined,
+          language: String(formData.get("language") ?? "").trim() || undefined,
+          emergency_contact_name: String(formData.get("emergencyContactName") ?? "").trim() || undefined,
+          emergency_contact_phone: String(formData.get("emergencyContactPhone") ?? "").trim() || undefined,
+          email: user?.email,
+        };
+
+        updateProfile.mutate(profileData, {
+          onSuccess: () => {
+            toast.success("Profil mis à jour !");
+            navigate("/trust-center");
+          },
+          onError: (error) => {
+            toast.error(error.message || "Erreur lors de la mise à jour du profil");
+          },
         });
-        navigate("/trust-center");
       }}
       onSubmitCapture={preventDefaultSubmit}
       pageId="setup-profile"
