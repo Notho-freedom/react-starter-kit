@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { OpenRideIcon } from "@/openride/shared/icons";
 import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useAuth } from "@/openride/shared/auth";
+import { useProfile } from "@/integrations/supabase/hooks";
 
 type DashboardTopBarProps = {
   actions?: ReactNode;
@@ -133,19 +135,21 @@ export function DashboardTopBarProfileChip({
   rating = "4.8",
   subtitle,
 }: DashboardTopBarProfileChipProps) {
-  const workflow = useOpenRideWorkflow();
-  const avatarAlt = workflow.user?.fullName ?? name;
+  const { user: authUser } = useAuth();
+  const { data: profile } = useProfile(authUser?.id);
+  const avatarUrl = (profile?.avatar_url as string) || "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg";
+  const displayName = profile ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || name : name;
 
   return (
     <div className="ml-2 flex cursor-pointer items-center gap-3 rounded-lg border-l border-white/10 p-1.5 pl-4 transition-colors hover:bg-white/5">
       <div className="hidden text-right lg:block">
-        <p className="text-sm font-medium text-white">{name}</p>
+        <p className="text-sm font-medium text-white">{displayName}</p>
         <p className="text-xs text-gray-400">{subtitle}</p>
       </div>
       <div className="relative">
         <img
-          src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-          alt={avatarAlt}
+          src={avatarUrl}
+          alt={displayName}
           className="h-9 w-9 rounded-full border border-white/20"
         />
         <div className="absolute -bottom-1 -right-1 rounded-full border border-brand-background bg-brand-error px-1 text-[9px] font-bold text-white">
@@ -166,10 +170,16 @@ export function DashboardTopBarActionGroup({
   searchWidthClassName,
 }: DashboardTopBarActionGroupProps) {
   const workflow = useOpenRideWorkflow();
+  const { user: authUser } = useAuth();
+  const { data: profile } = useProfile(authUser?.id);
+  
   const unreadCount = workflow.conversations.filter((conversation) => conversation.unread).length;
-  const displayName = workflow.user?.fullName || profileName;
-  const subtitle =
-    workflow.user?.memberSince ? `Membre depuis ${workflow.user.memberSince}` : profileSubtitle;
+  const displayName = profile
+    ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || workflow.user?.fullName || profileName
+    : workflow.user?.fullName || profileName;
+  const subtitle = profile?.created_at
+    ? `Membre depuis ${new Date(profile.created_at as string).getFullYear()}`
+    : workflow.user?.memberSince ? `Membre depuis ${workflow.user.memberSince}` : profileSubtitle;
   const rating = workflow.user?.rating ? workflow.user.rating.toFixed(1) : "4.8";
 
   return (

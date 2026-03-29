@@ -1,5 +1,6 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import MapboxAutocomplete from "@/openride/shared/components/MapboxAutocomplete";
 
 const cardClassName = "glass-card rounded-3xl p-6 md:p-8";
 
@@ -20,9 +21,8 @@ const PublishTripFormSections = () => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-brand-textMuted mb-2">Zone</label>
-              <input
+              <MapboxAutocomplete
                 name="availabilityZone"
-                type="text"
                 defaultValue={availabilityDraft.zone}
                 className="w-full input-field rounded-xl px-4 py-3"
                 placeholder="Ville ou zone de départ"
@@ -135,10 +135,9 @@ const PublishTripFormSections = () => {
             <div className="flex-1 w-full">
               <label className="block text-sm font-medium text-brand-textMuted mb-2">Départ</label>
               <div className="relative">
-                <OpenRideIcon name="location-dot" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
+                <OpenRideIcon name="location-dot" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
+                <MapboxAutocomplete
                   name="departure"
-                  type="text"
                   defaultValue={tripDraft.departure}
                   className="w-full input-field rounded-xl pl-10 pr-4 py-3"
                   placeholder="Ville de départ (ex: Paris)"
@@ -158,10 +157,9 @@ const PublishTripFormSections = () => {
             <div className="flex-1 w-full">
               <label className="block text-sm font-medium text-brand-textMuted mb-2">Arrivée</label>
               <div className="relative">
-                <OpenRideIcon name="location-dot" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
+                <OpenRideIcon name="location-dot" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
+                <MapboxAutocomplete
                   name="destination"
-                  type="text"
                   defaultValue={tripDraft.destination}
                   className="w-full input-field rounded-xl pl-10 pr-4 py-3"
                   placeholder="Ville d'arrivée (ex: Lyon)"

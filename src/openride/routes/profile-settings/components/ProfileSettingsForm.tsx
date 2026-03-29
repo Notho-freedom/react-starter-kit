@@ -1,10 +1,22 @@
 import { OpenRideIcon } from "@/openride/shared/icons";
 import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useAuth } from "@/openride/shared/auth";
+import { useProfile } from "@/integrations/supabase/hooks";
 import ThemeSettingsSection from "./ThemeSettingsSection";
 
 function ProfileSettingsForm() {
   const workflow = useOpenRideWorkflow();
-  const user = workflow.user;
+  const { user: authUser } = useAuth();
+  const { data: profile } = useProfile(authUser?.id);
+  
+  // Prefer Supabase profile data, fallback to workflow
+  const firstName = (profile?.first_name as string) || workflow.user?.firstName || "";
+  const lastName = (profile?.last_name as string) || workflow.user?.lastName || "";
+  const email = (profile?.email as string) || authUser?.email || workflow.user?.email || "";
+  const phone = (profile?.phone as string) || workflow.user?.phone || "";
+  const bio = (profile?.bio as string) || workflow.user?.bio || "";
+  const birthDate = (profile?.birth_date as string) || workflow.user?.birthDate || "";
+  const gender = (profile?.gender as string) || workflow.user?.gender || "male";
 
   return (
     <div className="flex-1 max-w-3xl">
@@ -18,21 +30,23 @@ function ProfileSettingsForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Prénom</label>
-                <input name="firstName" type="text" defaultValue={user?.firstName ?? "Ronald"} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
+                <input name="firstName" type="text" defaultValue={firstName} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Nom</label>
-                <input name="lastName" type="text" defaultValue={user?.lastName ?? "Richards"} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
+                <input name="lastName" type="text" defaultValue={lastName} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-300">Adresse Email</label>
               <div className="relative">
                 <OpenRideIcon name="envelope" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input name="email" type="email" defaultValue={user?.email ?? "ronald.richards@example.com"} className="w-full input-field rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-brand-success flex items-center gap-1">
-                  <OpenRideIcon name="circle-check" /> Vérifié
-                </span>
+                <input name="email" type="email" defaultValue={email} className="w-full input-field rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
+                {(profile?.email_verified as boolean) ? (
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-brand-success flex items-center gap-1">
+                    <OpenRideIcon name="circle-check" /> Vérifié
+                  </span>
+                ) : null}
               </div>
             </div>
             <div className="space-y-2">
@@ -41,20 +55,22 @@ function ProfileSettingsForm() {
                 <div className="flex items-center justify-center px-4 bg-brand-surface border border-white/10 border-r-0 rounded-l-xl text-sm text-gray-300">
                   +33
                 </div>
-                <input name="phone" type="tel" defaultValue={user?.phone ?? "6 12 34 56 78"} className="flex-1 input-field rounded-r-xl rounded-l-none px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-brand-success flex items-center gap-1">
-                  <OpenRideIcon name="circle-check" /> Vérifié
-                </span>
+                <input name="phone" type="tel" defaultValue={phone} className="flex-1 input-field rounded-r-xl rounded-l-none px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
+                {(profile?.phone_verified as boolean) ? (
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-brand-success flex items-center gap-1">
+                    <OpenRideIcon name="circle-check" /> Vérifié
+                  </span>
+                ) : null}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Date de naissance</label>
-                <input name="birthDate" type="date" defaultValue={user?.birthDate ?? "1995-08-15"} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50 text-gray-300 [color-scheme:dark]" />
+                <input name="birthDate" type="date" defaultValue={birthDate} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50 text-gray-300 [color-scheme:dark]" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Genre</label>
-                <select name="gender" defaultValue={user?.gender ?? "male"} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50 appearance-none">
+                <select name="gender" defaultValue={gender} className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50 appearance-none">
                   <option value="male">Homme</option>
                   <option value="female">Femme</option>
                   <option value="other">Autre / Préfère ne pas dire</option>
@@ -70,16 +86,13 @@ function ProfileSettingsForm() {
             <div className="space-y-2">
               <div className="flex justify-between items-end">
                 <label className="text-sm font-medium text-gray-300">Mini Bio</label>
-                <span className="text-xs text-gray-500">{user?.bio.length ?? 0}/300</span>
+                <span className="text-xs text-gray-500">{bio.length}/300</span>
               </div>
               <textarea
                 name="bio"
                 rows={4}
                 className="w-full input-field rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50 resize-none"
-                defaultValue={
-                  user?.bio ??
-                  "Bonjour ! Je fais régulièrement le trajet Paris-Lyon pour le travail. J'aime discuter de musique et de cinéma, mais j'apprécie aussi les trajets calmes."
-                }
+                defaultValue={bio}
               />
             </div>
           </div>
