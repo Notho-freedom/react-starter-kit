@@ -1,14 +1,15 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { handleOpenRideRouteClick, preventDefaultSubmit } from "@/openride/shared/navigation";
-import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useUpdateProfile } from "@/integrations/supabase/hooks";
 import { ProfileSettingsContent, ProfileSettingsHeader } from "./components";
 
 const ProfileSettingsPage = () => {
   const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
-  const workflow = useOpenRideWorkflow();
+  const updateProfile = useUpdateProfile();
 
   return (
     <OpenRidePageFrame
@@ -32,14 +33,17 @@ const ProfileSettingsPage = () => {
             `[name="${name}"]`,
           )?.value ?? "";
 
-        workflow.updateProfile({
-          bio: readFieldValue("bio") || workflow.user?.bio,
-          birthDate: readFieldValue("birthDate") || workflow.user?.birthDate,
-          email: readFieldValue("email") || workflow.user?.email,
-          firstName: readFieldValue("firstName") || workflow.user?.firstName,
-          gender: readFieldValue("gender") || workflow.user?.gender,
-          lastName: readFieldValue("lastName") || workflow.user?.lastName,
-          phone: readFieldValue("phone") || workflow.user?.phone,
+        updateProfile.mutate({
+          bio: readFieldValue("bio") || undefined,
+          birth_date: readFieldValue("birthDate") || undefined,
+          email: readFieldValue("email") || undefined,
+          first_name: readFieldValue("firstName") || undefined,
+          gender: readFieldValue("gender") || undefined,
+          last_name: readFieldValue("lastName") || undefined,
+          phone: readFieldValue("phone") || undefined,
+        }, {
+          onSuccess: () => toast.success("Profil mis à jour !"),
+          onError: (err) => toast.error(err.message || "Erreur"),
         });
       }}
       onSubmitCapture={preventDefaultSubmit}

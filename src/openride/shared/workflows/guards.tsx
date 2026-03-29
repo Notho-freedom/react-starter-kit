@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useOpenRideWorkflow } from "./OpenRideWorkflowProvider";
+import { useAuth } from "@/openride/shared/auth";
+import { useProfile } from "@/integrations/supabase/hooks";
 
 type GuardProps = {
   children?: ReactNode;
@@ -15,10 +16,12 @@ function renderGuardContent(children?: ReactNode) {
 }
 
 export function PublicEntryRoute({ children }: GuardProps) {
-  const workflow = useOpenRideWorkflow();
+  const { user, loading } = useAuth();
 
-  if (workflow.isAuthenticated) {
-    return <Navigate replace to={workflow.getNextRoute()} />;
+  if (loading) return null;
+
+  if (user) {
+    return <Navigate replace to="/setup-profile" />;
   }
 
   return renderGuardContent(children);
@@ -26,48 +29,57 @@ export function PublicEntryRoute({ children }: GuardProps) {
 
 export function ProtectedRoute({ children }: GuardProps) {
   const location = useLocation();
-  const workflow = useOpenRideWorkflow();
+  const { user, loading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile(user?.id);
 
-  if (!workflow.isAuthenticated) {
+  if (loading || profileLoading) return null;
+
+  if (!user) {
     return <Navigate replace state={{ from: location.pathname }} to="/auth" />;
   }
 
-  const nextRoute = workflow.getNextRoute();
-  if (nextRoute !== "/search-results") {
-    return <Navigate replace to={nextRoute} />;
+  // Check if profile is completed (has first_name)
+  const profileCompleted = !!(profile?.first_name);
+  if (!profileCompleted) {
+    return <Navigate replace to="/setup-profile" />;
   }
 
   return renderGuardContent(children);
 }
 
 export function OnboardingRoute({ children, step }: OnboardingRouteProps) {
-  const workflow = useOpenRideWorkflow();
+  const { user, loading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile(user?.id);
 
-  if (!workflow.isAuthenticated) {
+  if (loading || profileLoading) return null;
+
+  if (!user) {
     return <Navigate replace to="/auth" />;
   }
 
-  if (step === "setup-profile") {
-    if (workflow.profileCompleted) {
-      return <Navigate replace to={workflow.getNextRoute()} />;
-    }
+  const profileCompleted = !!(profile?.first_name);
 
+  if (step === "setup-profile") {
+    // Allow access even if profile is completed (user might want to edit)
     return renderGuardContent(children);
   }
 
-  if (!workflow.profileCompleted) {
+  // trust-center step
+  if (!profileCompleted) {
     return <Navigate replace to="/setup-profile" />;
-  }
-
-  if (workflow.trustCompleted) {
-    return <Navigate replace to={workflow.getNextRoute()} />;
   }
 
   return renderGuardContent(children);
 }
 
 export function OpenRideBootstrapRoute() {
-  const workflow = useOpenRideWorkflow();
+  const { user, loading } = useAuth();
 
-  return <Navigate replace to={workflow.getNextRoute()} />;
+  if (loading) return null;
+
+  if (!user) {
+    return <Navigate replace to="/auth" />;
+  }
+
+  return <Navigate replace to="/search-results" />;
 }

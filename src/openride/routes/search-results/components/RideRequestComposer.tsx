@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { OpenRideIcon } from "@/openride/shared/icons";
 import { useOpenRideWorkflow, type MatchSuggestion } from "@/openride/shared/workflows";
+import { useCreateRideRequest } from "@/integrations/supabase/hooks";
 
 function RideRequestComposer() {
   const navigate = useNavigate();
   const workflow = useOpenRideWorkflow();
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const createRequestMutation = useCreateRideRequest();
 
   const suggestions = useMemo(
     () =>
@@ -33,8 +36,36 @@ function RideRequestComposer() {
         statusLabel: match.statusLabel,
       });
     }
-
     navigate("/messages");
+  };
+
+  const handlePublishRequest = () => {
+    const draft = workflow.rideRequestDraft;
+
+    // Also create in Supabase
+    createRequestMutation.mutate(
+      {
+        origin: draft.origin,
+        destination: draft.destination,
+        date: draft.date || new Date().toISOString().split("T")[0],
+        start_time: draft.startTime || "08:00",
+        end_time: draft.endTime || "18:00",
+        seat_count: draft.seatCount,
+        notes: draft.notes,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Demande publiée !");
+        },
+        onError: (err) => {
+          toast.error(err.message || "Erreur lors de la publication");
+        },
+      }
+    );
+
+    // Also update local workflow for immediate UI feedback
+    const request = workflow.createRideRequest({});
+    setSubmittedId(request.id);
   };
 
   return (
@@ -184,12 +215,10 @@ function RideRequestComposer() {
             <button
               className="rounded-xl bg-brand-accentGreen px-6 py-3 font-semibold text-brand-dark transition-colors hover:bg-[#8be08b]"
               type="button"
-              onClick={() => {
-                const request = workflow.createRideRequest({});
-                setSubmittedId(request.id);
-              }}
+              disabled={createRequestMutation.isPending}
+              onClick={handlePublishRequest}
             >
-              Publier ma demande
+              {createRequestMutation.isPending ? "Publication..." : "Publier ma demande"}
             </button>
             <p className="text-sm text-brand-textMuted">
               Votre demande apparaîtra aussi dans <span className="text-white">Mes trajets</span>.
@@ -202,10 +231,7 @@ function RideRequestComposer() {
             <h3 className="mb-4 text-lg font-bold text-white">Correspondances suggérées</h3>
             <div className="space-y-4">
               {suggestions.slice(0, 4).map((match) => (
-                <div
-                  key={match.id}
-                  className="rounded-2xl border border-white/10 bg-brand-surface p-4"
-                >
+                <div key={match.id} className="rounded-2xl border border-white/10 bg-brand-surface p-4">
                   <div className="mb-3 flex items-center gap-3">
                     <img
                       alt={match.counterpartName}
@@ -214,16 +240,13 @@ function RideRequestComposer() {
                     />
                     <div className="min-w-0">
                       <p className="truncate font-medium text-white">{match.title}</p>
-                      <p className="truncate text-xs text-brand-textMuted">
-                        {match.counterpartRoleLabel}
-                      </p>
+                      <p className="truncate text-xs text-brand-textMuted">{match.counterpartRoleLabel}</p>
                     </div>
                   </div>
                   <p className="text-sm font-medium text-white">{match.routeLabel}</p>
                   <p className="mt-1 text-xs text-brand-textMuted">{match.secondaryLabel}</p>
                   <p className="mt-1 text-xs text-brand-accentGreen">
-                    {match.priceLabel ? `${match.priceLabel} • ` : ""}
-                    {match.metaLabel}
+                    {match.priceLabel ? `${match.priceLabel} • ` : ""}{match.metaLabel}
                   </p>
                   <div className="mt-4 flex items-center justify-between gap-3">
                     <span className="text-xs text-gray-400">{match.statusLabel}</span>

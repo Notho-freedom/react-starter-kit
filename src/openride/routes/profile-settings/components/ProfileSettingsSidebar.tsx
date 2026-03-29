@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { OpenRideIcon } from "@/openride/shared/icons";
 import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useAuth } from "@/openride/shared/auth";
 
 function ProfileSettingsSidebar() {
   const navigate = useNavigate();
   const workflow = useOpenRideWorkflow();
+  const { signOut } = useAuth();
   const user = workflow.user;
 
   return (
@@ -130,8 +132,8 @@ function ProfileSettingsSidebar() {
           </button>
           <button
             className="mt-4 flex items-center gap-3 px-4 py-3 rounded-lg text-left w-full text-brand-error hover:bg-brand-error/10 transition-colors"
-            onClick={() => {
-              workflow.logout();
+            onClick={async () => {
+              await signOut();
               navigate("/auth");
             }}
             type="button"
