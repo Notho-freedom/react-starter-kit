@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { AuthShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { preventDefaultSubmit, preventHashAnchor } from "@/openride/shared/navigation";
+import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
 import { AuthenticationHubFormsPanel, AuthenticationHubVisualPanel } from "./components";
+
+const authHubThemeId: OpenRideFixedThemeId = "auth-dark";
 
 function syncHubAuthView(root: HTMLDivElement | null, view: "login" | "signup") {
   if (!root) {
@@ -37,7 +40,8 @@ const AuthenticationHubPage = () => {
 
   return (
     <OpenRidePageFrame
-      bodyClassName="w-full min-h-screen flex items-center justify-center bg-brand-background p-4 sm:p-8"
+      bodyClassName="bg-gradient-custom flex min-h-screen w-full items-center justify-center p-4 sm:p-8"
+      fixedThemeId={authHubThemeId}
       onClickCapture={(event) => {
         preventHashAnchor(event);
         const target = event.target as HTMLElement | null;

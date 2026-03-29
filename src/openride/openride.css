@@ -118,6 +118,17 @@
 }
 
 .openride-theme-auth-light {
+  --brand-dark: 15 23 42;
+  --brand-background: 244 247 246;
+  --brand-surface: 255 255 255;
+  --brand-surface-light: 241 245 243;
+  --brand-purple: 69 184 148;
+  --brand-purple-light: 136 226 198;
+  --brand-accent: 69 184 148;
+  --brand-green: 69 184 148;
+  --brand-blue: 59 130 246;
+  --brand-text: 15 23 42;
+  --brand-text-muted: 100 116 139;
   --accent: 162 57% 61%;
   --accent-light: 136 226 198;
   --accent-dark: 69 184 148;
@@ -196,6 +207,49 @@
   --input-field-focus: rgba(168, 85, 247, 0.36);
 }
 
+.openride-theme-white {
+  --brand-dark: 22 28 36;
+  --brand-background: 247 244 238;
+  --brand-surface: 255 255 255;
+  --brand-surface-light: 241 235 226;
+  --brand-purple: 30 64 175;
+  --brand-purple-light: 96 165 250;
+  --brand-accent: 202 138 4;
+  --brand-green: 22 163 74;
+  --brand-blue: 37 99 235;
+  --brand-accent-green: 22 163 74;
+  --brand-accent-yellow: 217 119 6;
+  --brand-accent-purple: 30 64 175;
+  --brand-accent-purple-dark: 30 58 138;
+  --brand-text: 15 23 42;
+  --brand-text-muted: 100 116 139;
+  --brand-error: 220 38 38;
+  --brand-success: 21 128 61;
+  --brand-warning: 202 138 4;
+  --accent-light: 191 219 254;
+  --accent-dark: 37 99 235;
+  --glass-panel-bg: rgba(255, 255, 255, 0.84);
+  --glass-panel-border: rgba(148, 163, 184, 0.22);
+  --glass-card-bg: rgba(255, 255, 255, 0.92);
+  --glass-card-hover-bg: rgba(255, 255, 255, 0.98);
+  --glass-card-border: rgba(148, 163, 184, 0.22);
+  --glass-card-hover-border: rgba(37, 99, 235, 0.24);
+  --nav-active-bg: rgba(37, 99, 235, 0.08);
+  --nav-active-border: rgba(37, 99, 235, 0.22);
+  --nav-active-shadow: 0 24px 48px rgba(37, 99, 235, 0.12);
+  --input-field-bg: rgba(255, 255, 255, 0.96);
+  --input-field-border: rgba(148, 163, 184, 0.34);
+  --input-field-focus: rgba(37, 99, 235, 0.26);
+  --theme-ink: 15 23 42;
+  --theme-muted: 100 116 139;
+  --theme-subtle: 148 163 184;
+  --theme-border-soft: 203 213 225;
+  --theme-border-strong: 148 163 184;
+  --theme-surface-soft: 248 250 252;
+  --theme-surface-soft-strong: 241 245 249;
+  --theme-surface-strong: 226 232 240;
+}
+
 .glass-panel {
   background: var(--glass-panel-bg);
   border-color: var(--glass-panel-border);
@@ -241,6 +295,105 @@
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04);
 }
 
+.openride-theme-white {
+  color: rgb(var(--brand-text));
+}
+
+.openride-theme-white .text-white {
+  color: rgb(var(--theme-ink)) !important;
+}
+
+.openride-theme-white .text-gray-300,
+.openride-theme-white .text-gray-400 {
+  color: rgb(var(--theme-muted)) !important;
+}
+
+.openride-theme-white .text-gray-500 {
+  color: rgb(var(--theme-subtle)) !important;
+}
+
+.openride-theme-white .border-white\/10,
+.openride-theme-white .border-white\/20,
+.openride-theme-white .border-white\/5 {
+  border-color: rgb(var(--theme-border-soft) / 0.72) !important;
+}
+
+.openride-theme-white .border-gray-600,
+.openride-theme-white .border-gray-700,
+.openride-theme-white .border-gray-800 {
+  border-color: rgb(var(--theme-border-soft) / 0.82) !important;
+}
+
+.openride-theme-white .bg-white\/5 {
+  background-color: rgb(255 255 255 / 0.78) !important;
+}
+
+.openride-theme-white .bg-white\/10 {
+  background-color: rgb(255 255 255 / 0.86) !important;
+}
+
+.openride-theme-white .bg-white\/20 {
+  background-color: rgb(255 255 255 / 0.94) !important;
+}
+
+.openride-theme-white .bg-gray-700 {
+  background-color: rgb(var(--theme-surface-soft)) !important;
+}
+
+.openride-theme-white .bg-gray-800 {
+  background-color: rgb(var(--theme-surface-soft-strong)) !important;
+}
+
+.openride-theme-white .bg-gray-900 {
+  background-color: rgb(var(--theme-surface-strong)) !important;
+}
+
+.openride-theme-white .hover\:bg-white\/10:hover {
+  background-color: rgb(var(--theme-surface-soft-strong)) !important;
+}
+
+.openride-theme-white .hover\:bg-gray-600:hover {
+  background-color: rgb(var(--theme-surface-strong)) !important;
+}
+
+.openride-theme-white .hover\:bg-gray-700:hover,
+.openride-theme-white .hover\:bg-gray-800:hover {
+  background-color: rgb(var(--theme-surface-soft-strong)) !important;
+}
+
+.openride-theme-white .hover\:text-white:hover {
+  color: rgb(var(--brand-blue)) !important;
+}
+
+.openride-theme-white .bg-brand-accent.text-white,
+.openride-theme-white .bg-brand-accentGreen.text-white,
+.openride-theme-white .bg-brand-purple.text-white,
+.openride-theme-white .bg-brand-error.text-white,
+.openride-theme-white .bg-brand-success.text-white,
+.openride-theme-white .bg-brand-warning.text-white,
+.openride-theme-white .bg-brand-dark.text-white {
+  color: rgb(255 255 255) !important;
+}
+
+.openride-theme-white .bg-brand-accent .text-white,
+.openride-theme-white .bg-brand-accentGreen .text-white,
+.openride-theme-white .bg-brand-purple .text-white,
+.openride-theme-white .bg-brand-error .text-white,
+.openride-theme-white .bg-brand-success .text-white,
+.openride-theme-white .bg-brand-warning .text-white,
+.openride-theme-white .bg-brand-dark .text-white {
+  color: rgb(255 255 255) !important;
+}
+
+.openride-theme-white ::placeholder {
+  color: rgb(var(--theme-subtle));
+}
+
+.openride-theme-white input[type="date"],
+.openride-theme-white input[type="time"] {
+  color-scheme: light;
+}
+
 .hide-scroll,
 .custom-scroll,
 .chat-scroll {
@@ -280,6 +433,18 @@
   color: white;
 }
 
+.openride-theme-white .filter-chip {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: rgb(var(--theme-muted));
+}
+
+.openride-theme-white .filter-chip:hover {
+  background: rgba(248, 250, 252, 0.96);
+  border-color: rgba(37, 99, 235, 0.22);
+  color: rgb(var(--theme-ink));
+}
+
 .map-marker {
   filter: drop-shadow(0 10px 20px rgba(139, 92, 246, 0.25));
 }
@@ -308,6 +473,11 @@
     border-color 0.2s ease,
     background-color 0.2s ease,
     box-shadow 0.2s ease;
+}
+
+.openride-theme-white .custom-radio {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .custom-radio:checked {
@@ -363,6 +533,14 @@
 
 .timeline-line {
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05));
+}
+
+.openride-theme-white .timeline-dot {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+.openride-theme-white .timeline-line {
+  background: linear-gradient(to bottom, rgba(148, 163, 184, 0.55), rgba(203, 213, 225, 0.2));
 }
 
 .status-badge-success {

@@ -109,19 +109,37 @@ describe("OpenRide routes", () => {
     const { container, unmount } = renderRoute("/profile-settings");
 
     await screen.findByRole("heading", { name: "Profil & Paramètres" });
-    fireEvent.click(screen.getByRole("button", { name: /Auth sombre/i }));
+    fireEvent.click(screen.getByRole("button", { name: /White/i }));
 
     expect(
       container.querySelector('[data-openride-page="profile-settings"]'),
-    ).toHaveAttribute("data-openride-theme", "auth-dark");
-    expect(window.localStorage.getItem(openRideThemeStorageKey)).toBe("auth-dark");
+    ).toHaveAttribute("data-openride-theme", "white");
+    expect(window.localStorage.getItem(openRideThemeStorageKey)).toBe("white");
 
     unmount();
 
-    const nextRender = renderRoute("/auth");
+    const nextRender = renderRoute("/messages");
+    expect(await screen.findByRole("heading", { name: "Messages" })).toBeInTheDocument();
+    expect(
+      nextRender.container.querySelector('[data-openride-page="messages"]'),
+    ).toHaveAttribute("data-openride-theme", "white");
+  });
+
+  it("keeps authentication routes on their fixed visual identity", async () => {
+    window.localStorage.setItem(openRideThemeStorageKey, "white");
+
+    const authRender = renderRoute("/auth");
     expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
     expect(
-      nextRender.container.querySelector('[data-openride-page="auth"]'),
+      authRender.container.querySelector('[data-openride-page="auth"]'),
+    ).toHaveAttribute("data-openride-theme", "auth-light");
+
+    authRender.unmount();
+
+    const hubRender = renderRoute("/authentication-hub");
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
+    expect(
+      hubRender.container.querySelector('[data-openride-page="authentication-hub"]'),
     ).toHaveAttribute("data-openride-theme", "auth-dark");
   });
 

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { AuthShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { preventDefaultSubmit, preventHashAnchor } from "@/openride/shared/navigation";
+import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
 import { AuthFormsPanel, AuthVisualPanel } from "./components";
+
+const authThemeId: OpenRideFixedThemeId = "auth-light";
 
 function syncSimpleAuthView(root: HTMLDivElement | null, view: "login" | "signup") {
   if (!root) {
@@ -22,7 +25,8 @@ const AuthPage = () => {
 
   return (
     <OpenRidePageFrame
-      bodyClassName="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-brand-background"
+      bodyClassName="w-full min-h-screen flex items-center justify-center bg-brand-background p-4 sm:p-8"
+      fixedThemeId={authThemeId}
       onClickCapture={(event) => {
         preventHashAnchor(event);
         const target = event.target as HTMLElement | null;

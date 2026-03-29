@@ -5,14 +5,18 @@ import {
   preventDefaultSubmit,
   preventHashAnchor,
 } from "@/openride/shared/navigation";
+import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
 import { TrustCenterContentPanel, TrustCenterVisualPanel } from "./components";
+
+const trustThemeId: OpenRideFixedThemeId = "trust-dark";
 
 const TrustCenterPage = () => {
   const navigate = useNavigate();
 
   return (
     <OpenRidePageFrame
-      bodyClassName="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-brand-background"
+      bodyClassName="flex min-h-screen w-full items-center justify-center bg-brand-background p-4 sm:p-8"
+      fixedThemeId={trustThemeId}
       onClickCapture={(event) => {
         preventHashAnchor(event);
         handleOpenRideRouteClick(event, navigate);

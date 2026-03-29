@@ -5,6 +5,9 @@ export type OpenRideThemeId =
   | "search"
   | "dashboard"
   | "profile"
+  | "white";
+
+export type OpenRideFixedThemeId =
   | "auth-light"
   | "auth-dark"
   | "setup-light"
@@ -48,38 +51,24 @@ export const openRideThemes: OpenRideThemeDefinition[] = [
     previewColors: ["#0A0B10", "#1E212B", "#8B5CF6", "#22C55E"],
   },
   {
-    id: "auth-light",
-    label: "Auth clair",
-    description: "Palette lumineuse et douce pour une interface aérée.",
-    className: "openride-theme-auth-light",
-    previewColors: ["#F4F7F6", "#FFFFFF", "#88E2C6", "#45B894"],
-  },
-  {
-    id: "auth-dark",
-    label: "Auth sombre",
-    description: "Palette sombre violette avec contraste fort.",
-    className: "openride-theme-auth-dark",
-    previewColors: ["#0F172A", "#1E293B", "#A855F7", "#FFFFFF"],
-  },
-  {
-    id: "setup-light",
-    label: "Setup clair",
-    description: "Fond clair avec accents violets et surfaces nettes.",
-    className: "openride-theme-setup-light",
-    previewColors: ["#F1F5F9", "#FFFFFF", "#A855F7", "#0F172A"],
-  },
-  {
-    id: "trust-dark",
-    label: "Trust sombre",
-    description: "Palette institutionnelle sombre pour les écrans de confiance.",
-    className: "openride-theme-trust-dark",
-    previewColors: ["#0F172A", "#334155", "#A855F7", "#94A3B8"],
+    id: "white",
+    label: "White",
+    description: "Palette claire premium, plus nette et plus lumineuse pour toute l'app.",
+    className: "openride-theme-white",
+    previewColors: ["#F7F4EE", "#FFFFFF", "#1E40AF", "#22C55E"],
   },
 ];
 
 export const openRideThemeMap = new Map(
   openRideThemes.map((theme) => [theme.id, theme] as const),
 );
+
+export const openRideFixedThemeClasses: Record<OpenRideFixedThemeId, string> = {
+  "auth-light": "openride-theme-auth-light",
+  "auth-dark": "openride-theme-auth-dark",
+  "setup-light": "openride-theme-setup-light",
+  "trust-dark": "openride-theme-trust-dark",
+};
 
 export function isOpenRideThemeId(value: string): value is OpenRideThemeId {
   return openRideThemeMap.has(value as OpenRideThemeId);
@@ -90,5 +79,17 @@ export function getOpenRideTheme(themeId: OpenRideThemeId) {
 }
 
 export function resolveOpenRideThemeId(value: string | null | undefined): OpenRideThemeId {
-  return value && isOpenRideThemeId(value) ? value : "default";
+  if (!value) {
+    return "default";
+  }
+
+  if (value === "auth-light" || value === "setup-light") {
+    return "white";
+  }
+
+  if (value === "auth-dark" || value === "trust-dark") {
+    return "default";
+  }
+
+  return isOpenRideThemeId(value) ? value : "default";
 }

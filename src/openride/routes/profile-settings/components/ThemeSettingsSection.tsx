@@ -10,7 +10,8 @@ const ThemeSettingsSection = () => {
         <div>
           <h3 className="text-lg font-medium text-white">Thème de l'application</h3>
           <p className="mt-1 text-sm text-gray-400">
-            Le thème choisi s&apos;applique immédiatement à tous les écrans OpenRide sur cet appareil.
+            Le thème choisi s&apos;applique immédiatement à l&apos;application OpenRide sur cet appareil.
+            Les écrans d&apos;authentification gardent leur propre identité visuelle.
           </p>
         </div>
         <span className="inline-flex w-fit rounded-full border border-brand-success/20 bg-brand-success/10 px-3 py-1 text-xs font-medium text-brand-success">
