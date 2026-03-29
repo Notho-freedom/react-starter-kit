@@ -139,7 +139,7 @@ function TripsList({
                     </div>
                     <div>
                       <h3 className="font-medium text-white">{item.routeLabel}</h3>
-                      <p className="text-sm text-gray-400">{item.departureLabel}</p>
+                      <p className="text-sm text-gray-400">{(item as PublishedTrip).departureLabel}</p>
                     </div>
                   </div>
                   <div className="text-right">
