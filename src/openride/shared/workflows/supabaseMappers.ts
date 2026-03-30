@@ -24,6 +24,10 @@ function num(v: unknown, fallback = 0): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
+function maybeNum(v: unknown): number | undefined {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
 function bool(v: unknown): boolean {
   return Boolean(v);
 }
@@ -101,15 +105,15 @@ export function dbProfileToUserProfile(p: R): UserProfile {
     bio: str(p.bio),
     birthDate: str(p.birth_date),
     city: str(p.city),
-    country: str(p.country, "France"),
-    currency: str(p.currency, "EUR (€)"),
+    country: str(p.country, "Canada"),
+    currency: str(p.currency, "CAD ($)"),
     email: str(p.email),
     emergencyContactName: str(p.emergency_contact_name),
     emergencyContactPhone: str(p.emergency_contact_phone),
     firstName: fn,
     fullName: fullName(fn, ln),
     gender: str(p.gender),
-    language: str(p.language, "French"),
+    language: str(p.language, "Français"),
     lastName: ln,
     memberSince: yearStr,
     miniRoleLabel: `Membre depuis ${yearStr}`,
@@ -151,6 +155,8 @@ export function dbTripToRide(t: R): Ride {
     carImage: str(driver.avatar_url) ? DEFAULT_CAR_IMAGE : DEFAULT_CAR_IMAGE,
     dateLabel: fullDateLabel,
     departureDateLabel: dateLabel,
+    departureLat: maybeNum(t.departure_lat),
+    departureLng: maybeNum(t.departure_lng),
     departureLocation: departure,
     departureStation: str(t.departure_station, departure),
     departureTime: time,
@@ -166,11 +172,12 @@ export function dbTripToRide(t: R): Ride {
       vehicleColor: str(t.vehicle_color, ""),
       vehicleName: str(t.vehicle_name, "Véhicule"),
     },
+    driverId: str(driver.id, str(t.driver_id)),
     durationLabel: "~4h",
     mapImage: DEFAULT_MAP_IMAGE,
     originCity: departure,
     price,
-    priceLabel: `€${price}`,
+    priceLabel: `CA$${price}`,
     preferences: {
       ambience: "Standard",
       instantBook: false,
@@ -182,6 +189,8 @@ export function dbTripToRide(t: R): Ride {
     seatsLeft,
     seatsTotal,
     serviceFee: Math.round(price * 0.1 * 100) / 100,
+    destinationLat: maybeNum(t.destination_lat),
+    destinationLng: maybeNum(t.destination_lng),
     taxes: Math.round(price * 0.02 * 100) / 100,
   };
 }
@@ -268,6 +277,7 @@ export function dbAvailabilityToPost(a: R): DriverAvailabilityPost {
   return {
     date: str(a.date),
     driverAvatar: str(driver.avatar_url, DEFAULT_AVATAR),
+    driverId: str(driver.id, str(a.driver_id)),
     driverName: fullName(driverFn, driverLn),
     driverRating: num(driver.rating, 5.0),
     id: str(a.id),
@@ -301,6 +311,7 @@ export function dbRequestToPost(r: R): RiderRequestPost {
     notes: str(r.notes),
     origin,
     passengerAvatar: str(passenger.avatar_url, DEFAULT_AVATAR),
+    passengerId: str(passenger.id, str(r.passenger_id)),
     passengerName: fullName(pFn, pLn),
     routeLabel: `${origin || "Départ"} → ${destination || "Arrivée"}`,
     seatCount: num(r.seat_count, 1),

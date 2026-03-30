@@ -76,11 +76,14 @@ export type Ride = {
   carImage: string;
   dateLabel: string;
   departureDateLabel: string;
+  departureLat?: number;
+  departureLng?: number;
   departureLocation: string;
   departureStation: string;
   departureTime: string;
   distanceLabel: string;
   driver: RideDriver;
+  driverId?: string;
   durationLabel: string;
   id: string;
   mapImage: string;
@@ -92,6 +95,8 @@ export type Ride = {
   seatsLeft: number;
   seatsTotal: number;
   serviceFee: number;
+  destinationLat?: number;
+  destinationLng?: number;
   taxes: number;
 };
 
@@ -169,6 +174,7 @@ export type DriverAvailabilityDraft = {
 export type DriverAvailabilityPost = {
   date: string;
   driverAvatar: string;
+  driverId?: string;
   driverName: string;
   driverRating: number;
   id: string;
@@ -199,6 +205,7 @@ export type RiderRequestPost = {
   notes: string;
   origin: string;
   passengerAvatar: string;
+  passengerId?: string;
   passengerName: string;
   routeLabel: string;
   seatCount: number;

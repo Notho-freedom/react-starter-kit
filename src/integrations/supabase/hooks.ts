@@ -78,7 +78,7 @@ export function useMyTrips() {
       if (!user) return [];
       const { data, error } = await supabase
         .from("trips")
-        .select("*")
+        .select("*, driver:profiles(*)")
         .eq("driver_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -165,7 +165,7 @@ export function useMyAvailabilities() {
       if (!user) return [];
       const { data, error } = await supabase
         .from("driver_availabilities")
-        .select("*")
+        .select("*, driver:profiles(*)")
         .eq("driver_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -255,7 +255,7 @@ export function useMyRequests() {
       if (!user) return [];
       const { data, error } = await supabase
         .from("ride_requests")
-        .select("*")
+        .select("*, passenger:profiles(*)")
         .eq("passenger_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -271,7 +271,7 @@ export function useCreateRideRequest() {
   return useMutation({
     mutationFn: async (payload: {
       origin: string;
-      destination: string;
+      destination?: string;
       date: string;
       start_time: string;
       end_time: string;
@@ -321,7 +321,7 @@ export function useMyBookings() {
       if (!user) return [];
       const { data, error } = await supabase
         .from("bookings")
-        .select("*, trip:trips(*)")
+        .select("*, trip:trips(*, driver:profiles(*))")
         .eq("passenger_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;

@@ -69,19 +69,39 @@ function TripsSummaryPanel({ onMessage, ride, role, trip }: TripsSummaryPanelPro
         ) : null}
 
         <div className="space-y-3">
+          {isPassengerTrip ? (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Paiement</span>
+              <span
+                className={
+                  (trip as PassengerTrip).paymentStatus === "cash_pending"
+                    ? "text-brand-accentYellow"
+                    : (trip as PassengerTrip).paymentStatus === "authorized"
+                      ? "text-brand-warning"
+                      : "text-brand-success"
+                }
+              >
+                {(trip as PassengerTrip).paymentStatus === "cash_pending"
+                  ? "Cash à bord"
+                  : (trip as PassengerTrip).paymentStatus === "authorized"
+                    ? "Paiement autorisé"
+                    : "Payé en ligne"}
+              </span>
+            </div>
+          ) : null}
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">{isPassengerTrip ? "Prix par place" : "Prix proposé"}</span>
-            <span className="text-white">{trip.price.toFixed(2)} €</span>
+            <span className="text-white">CA${trip.price.toFixed(2)}</span>
           </div>
           {isPassengerTrip && ride ? (
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Frais de service</span>
-              <span className="text-white">{(ride.serviceFee + ride.taxes).toFixed(2)} €</span>
+              <span className="text-white">CA${(ride.serviceFee + ride.taxes).toFixed(2)}</span>
             </div>
           ) : null}
           <div className="flex justify-between text-base font-medium pt-3 border-t border-white/5">
             <span className="text-white">{isPassengerTrip ? "Total payé" : "Total attendu"}</span>
-            <span className="text-brand-accentPurple">{total.toFixed(2)} €</span>
+            <span className="text-brand-accentPurple">CA${total.toFixed(2)}</span>
           </div>
         </div>
       </div>

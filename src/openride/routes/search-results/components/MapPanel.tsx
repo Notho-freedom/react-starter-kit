@@ -22,7 +22,7 @@ function MapPanel() {
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/dark-v11",
-      center: [2.3522, 48.8566], // Paris default
+      center: [-73.5673, 45.5017], // Montreal default
       zoom: 5,
       attributionControl: false,
     });
@@ -51,9 +51,8 @@ function MapPanel() {
 
     // Add markers for rides with coordinates (from Supabase)
     workflow.searchRides.forEach((ride) => {
-      // Try to use stored coordinates
-      const lat = (ride as Record<string, unknown>).departure_lat as number | undefined;
-      const lng = (ride as Record<string, unknown>).departure_lng as number | undefined;
+      const lat = ride.departureLat;
+      const lng = ride.departureLng;
 
       if (lat && lng) {
         hasCoords = true;

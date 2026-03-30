@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { AuthShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { preventDefaultSubmit, preventHashAnchor } from "@/openride/shared/navigation";
 import { type OpenRideFixedThemeId } from "@/openride/shared/theme";
-import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { useAuth } from "@/openride/shared/auth";
 import { AuthenticationHubFormsPanel, AuthenticationHubVisualPanel } from "./components";
 
 const authHubThemeId: OpenRideFixedThemeId = "auth-dark";
@@ -35,12 +36,66 @@ function syncHubAuthView(root: HTMLDivElement | null, view: "login" | "signup") 
 const AuthenticationHubPage = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"login" | "signup">("login");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const workflow = useOpenRideWorkflow();
+  const { signIn, signUp, user } = useAuth();
 
   useEffect(() => {
     syncHubAuthView(rootRef.current, view);
   }, [view]);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/search-results", { replace: true });
+    }
+  }, [navigate, user]);
+
+  const handleAuthSubmit = async (action: "login" | "signup", form: HTMLFormElement) => {
+    const formData = new FormData(form);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "").trim();
+
+    if (!email || !password) {
+      toast.error("Email et mot de passe requis");
+      return;
+    }
+
+    setLoading(true);
+
+    if (action === "login") {
+      const { error } = await signIn(email, password);
+      setLoading(false);
+      if (error) {
+        toast.error(error.message || "Erreur de connexion");
+        return;
+      }
+      toast.success("Connexion réussie !");
+      navigate("/search-results");
+      return;
+    }
+
+    const firstName = String(formData.get("firstName") ?? "").trim();
+    const lastName = String(formData.get("lastName") ?? "").trim();
+    const passwordConfirmation = String(formData.get("passwordConfirmation") ?? "").trim();
+
+    if (password !== passwordConfirmation) {
+      setLoading(false);
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    const { error } = await signUp(email, password, {
+      first_name: firstName,
+      last_name: lastName,
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message || "Erreur lors de l'inscription");
+      return;
+    }
+    toast.success("Compte créé !");
+    navigate("/setup-profile");
+  };
 
   return (
     <OpenRidePageFrame
@@ -61,6 +116,9 @@ const AuthenticationHubPage = () => {
 
         if (submitAction === "login" || submitAction === "signup") {
           event.preventDefault();
+          if (loading) {
+            return;
+          }
           const form = rootRef.current?.querySelector<HTMLFormElement>(
             `[data-openride-auth-form="${submitAction}"]`,
           );
@@ -69,18 +127,7 @@ const AuthenticationHubPage = () => {
             return;
           }
 
-          const formData = new FormData(form);
-          const payload = {
-            email: String(formData.get("email") ?? "").trim(),
-            firstName: String(formData.get("firstName") ?? "").trim(),
-            lastName: String(formData.get("lastName") ?? "").trim(),
-          };
-          const nextRoute =
-            submitAction === "login"
-              ? workflow.login("premium", payload)
-              : workflow.signup("premium", payload);
-
-          navigate(nextRoute);
+          handleAuthSubmit(submitAction, form);
         }
       }}
       onSubmitCapture={preventDefaultSubmit}

@@ -1,14 +1,25 @@
-import { useOpenRideWorkflow } from "@/openride/shared/workflows";
+import { type PaymentMethodId, useOpenRideWorkflow } from "@/openride/shared/workflows";
 
 type BookingSuccessModalProps = {
   isOpen: boolean;
+  paymentMethod?: PaymentMethodId;
 };
 
-function BookingSuccessModal({ isOpen }: BookingSuccessModalProps) {
+function BookingSuccessModal({ isOpen, paymentMethod }: BookingSuccessModalProps) {
   const workflow = useOpenRideWorkflow();
-  const latestTrip = workflow.passengerTrips[0];
   const ride = workflow.selectedRide ?? workflow.searchRides[0];
   const driverName = ride?.driver.shortName ?? "Marcus";
+  const seatCount = Math.max(workflow.bookingDraft.seatCount, 1);
+  const total =
+    ride
+      ? ride.price * seatCount + ride.serviceFee + ride.taxes
+      : workflow.passengerTrips[0]?.price ?? 39.2;
+  const resolvedPaymentMethod = paymentMethod ?? workflow.bookingDraft.paymentMethod;
+  const bookingLabel =
+    resolvedPaymentMethod === "cash"
+      ? "paiement en cash au départ"
+      : "reçu a été envoyé à votre email";
+  const amountLabel = resolvedPaymentMethod === "cash" ? "Montant à payer" : "Montant payé";
 
   return (
     <div
@@ -30,18 +41,18 @@ function BookingSuccessModal({ isOpen }: BookingSuccessModalProps) {
 
         <h2 className="mb-2 text-2xl font-bold text-white">Réservation Confirmée !</h2>
         <p className="mb-8 text-brand-textMuted">
-          Votre place pour le trajet {latestTrip?.routeLabel ?? ride?.routeLabel ?? "Paris → Lyon"} a été réservée avec succès. Le reçu a été envoyé à votre email.
+          Votre place pour le trajet {ride?.routeLabel ?? workflow.passengerTrips[0]?.routeLabel ?? "Montréal → Ottawa"} a été réservée avec succès. Le {bookingLabel}.
         </p>
 
         <div className="mb-8 w-full rounded-2xl border border-gray-700 bg-brand-surface p-4 text-left">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm text-brand-textMuted">Numéro de réservation</span>
-            <span className="font-mono text-sm text-white">#{latestTrip?.id ?? "RS-894831"}</span>
+            <span className="font-mono text-sm text-white">#{workflow.bookingDraft.rideId ?? workflow.passengerTrips[0]?.id ?? "RS-894831"}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-brand-textMuted">Montant payé</span>
+            <span className="text-sm text-brand-textMuted">{amountLabel}</span>
             <span className="text-sm font-bold text-brand-accentGreen">
-              €{latestTrip?.price.toFixed(2) ?? "39.20"}
+              CA${total.toFixed(2)}
             </span>
           </div>
         </div>

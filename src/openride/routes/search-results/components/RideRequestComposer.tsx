@@ -15,18 +15,19 @@ function RideRequestComposer() {
     () =>
       workflow.getSearchMatches(
         submittedId
-          ? workflow.rideRequests.find((request) => request.id === submittedId) ?? workflow.rideRequestDraft
+          ? workflow.myRideRequests.find((request) => request.id === submittedId) ??
+              workflow.rideRequestDraft
           : workflow.rideRequestDraft,
       ),
     [submittedId, workflow],
   );
 
-  const handleContactMatch = (match: MatchSuggestion) => {
+  const handleContactMatch = async (match: MatchSuggestion) => {
     if (match.contextType === "ride") {
       workflow.setSelectedRide(match.contextId);
-      workflow.openConversationForRide(match.contextId);
+      await workflow.openConversationForRide(match.contextId);
     } else {
-      workflow.openConversationForContext({
+      await workflow.openConversationForContext({
         contextId: match.contextId,
         contextType: match.contextType,
         counterpartAvatar: match.counterpartAvatar,
@@ -54,18 +55,15 @@ function RideRequestComposer() {
         notes: draft.notes,
       },
       {
-        onSuccess: () => {
+        onSuccess: (request) => {
           toast.success("Demande publiée !");
+          setSubmittedId(String((request as Record<string, unknown>).id ?? ""));
         },
         onError: (err) => {
           toast.error(err.message || "Erreur lors de la publication");
         },
       }
     );
-
-    // Also update local workflow for immediate UI feedback
-    const request = workflow.createRideRequest({});
-    setSubmittedId(request.id);
   };
 
   return (

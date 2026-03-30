@@ -22,7 +22,7 @@ function ProfileSettingsSidebar() {
           </div>
           <h2 className="text-xl font-bold text-white mb-1">{user?.fullName ?? "Ronald Richards"}</h2>
           <p className="text-sm text-gray-400 mb-4">
-            {user?.city ?? "Paris"}, {user?.country ?? "France"} • {user?.ageLabel ?? "28 ans"}
+            {user?.city ?? "Montréal"}, {user?.country ?? "Canada"} • {user?.ageLabel ?? "28 ans"}
           </p>
           <div className="flex justify-center gap-4 mb-6">
             <div className="text-center">

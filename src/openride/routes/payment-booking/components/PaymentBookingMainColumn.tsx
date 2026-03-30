@@ -150,7 +150,7 @@ function PaymentBookingMainColumn() {
             <div className="flex-1 flex justify-between items-center">
               <div>
                 <span className="text-white font-medium block">Portefeuille RideShare</span>
-                <span className="text-sm text-brand-textMuted">Solde disponible: €12.50</span>
+                <span className="text-sm text-brand-textMuted">Solde disponible: CA$12.50</span>
               </div>
               <OpenRideIcon name="wallet" className="text-brand-accentPurple text-xl" />
             </div>

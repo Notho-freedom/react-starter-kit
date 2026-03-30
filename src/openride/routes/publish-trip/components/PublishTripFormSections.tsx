@@ -140,7 +140,7 @@ const PublishTripFormSections = () => {
                   name="departure"
                   defaultValue={tripDraft.departure}
                   className="w-full input-field rounded-xl pl-10 pr-4 py-3"
-                  placeholder="Ville de départ (ex: Paris)"
+                  placeholder="Ville de départ (ex: Montréal)"
                 />
               </div>
             </div>
@@ -162,7 +162,7 @@ const PublishTripFormSections = () => {
                   name="destination"
                   defaultValue={tripDraft.destination}
                   className="w-full input-field rounded-xl pl-10 pr-4 py-3"
-                  placeholder="Ville d'arrivée (ex: Lyon)"
+                  placeholder="Ville d'arrivée (ex: Ottawa)"
                 />
               </div>
             </div>
@@ -223,7 +223,7 @@ const PublishTripFormSections = () => {
           <div>
             <label className="block text-sm font-medium text-brand-textMuted mb-4">Prix par place</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white font-bold text-lg">€</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white font-bold text-lg">CA$</span>
               <input
                 name="price"
                 type="number"

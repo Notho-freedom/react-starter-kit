@@ -17,11 +17,20 @@ function renderGuardContent(children?: ReactNode) {
 
 export function PublicEntryRoute({ children }: GuardProps) {
   const { user, loading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile(user?.id);
 
-  if (loading) return null;
+  if (loading || (user && profileLoading)) return null;
 
   if (user) {
-    return <Navigate replace to="/setup-profile" />;
+    const profileCompleted = !!profile?.first_name;
+    const trustCompleted = !!(profile?.email_verified && profile?.phone_verified);
+    const nextRoute = !profileCompleted
+      ? "/setup-profile"
+      : !trustCompleted
+        ? "/trust-center"
+        : "/search-results";
+
+    return <Navigate replace to={nextRoute} />;
   }
 
   return renderGuardContent(children);
@@ -38,10 +47,15 @@ export function ProtectedRoute({ children }: GuardProps) {
     return <Navigate replace state={{ from: location.pathname }} to="/auth" />;
   }
 
-  // Check if profile is completed (has first_name)
   const profileCompleted = !!(profile?.first_name);
+  const trustCompleted = !!(profile?.email_verified && profile?.phone_verified);
+
   if (!profileCompleted) {
     return <Navigate replace to="/setup-profile" />;
+  }
+
+  if (!trustCompleted) {
+    return <Navigate replace to="/trust-center" />;
   }
 
   return renderGuardContent(children);
@@ -74,11 +88,23 @@ export function OnboardingRoute({ children, step }: OnboardingRouteProps) {
 
 export function OpenRideBootstrapRoute() {
   const { user, loading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile(user?.id);
 
-  if (loading) return null;
+  if (loading || (user && profileLoading)) return null;
 
   if (!user) {
     return <Navigate replace to="/auth" />;
+  }
+
+  const profileCompleted = !!profile?.first_name;
+  const trustCompleted = !!(profile?.email_verified && profile?.phone_verified);
+
+  if (!profileCompleted) {
+    return <Navigate replace to="/setup-profile" />;
+  }
+
+  if (!trustCompleted) {
+    return <Navigate replace to="/trust-center" />;
   }
 
   return <Navigate replace to="/search-results" />;

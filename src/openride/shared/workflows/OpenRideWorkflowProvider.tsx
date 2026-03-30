@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -11,29 +12,42 @@ import {
   defaultAvailabilityDraft,
   defaultBookingDraft,
   defaultUserProfile,
-  formatTimeWindow,
   openRideWorkflowStorageKey,
 } from "./seed";
 import {
-  dbProfileToUserProfile,
-  dbTripToRide,
-  dbBookingToPassengerTrip,
-  dbTripToPublishedTrip,
   dbAvailabilityToPost,
-  dbRequestToPost,
+  dbBookingToPassengerTrip,
   dbConversationToConversation,
+  dbProfileToUserProfile,
+  dbRequestToPost,
+  dbTripToPublishedTrip,
+  dbTripToRide,
 } from "./supabaseMappers";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  useCancelAvailability,
+  useCancelRideRequest,
+  useConversations,
+  useCreateConversation,
+  useDriverAvailabilities,
+  useMessages,
+  useMyAvailabilities,
+  useMyBookings,
+  useMyRequests,
+  useMyTrips,
+  useProfile,
+  useRideRequests,
+  useSendMessage,
+  useTrips,
+} from "@/integrations/supabase/hooks";
 import { useAuth } from "@/openride/shared/auth";
 import type {
-  AuthVariant,
   BookingDraft,
   Conversation,
+  ConversationMessage,
   DriverAvailabilityDraft,
   DriverAvailabilityPost,
   MatchContextType,
   MatchSuggestion,
-  OnboardingStep,
   OpenRideWorkflowState,
   PassengerTrip,
   PaymentMethodId,
@@ -46,10 +60,6 @@ import type {
   SearchMode,
   UserProfile,
 } from "./types";
-
-type AuthFormPayload = Partial<
-  Pick<UserProfile, "email" | "firstName" | "fullName" | "lastName" | "phone">
->;
 
 type CompleteBookingPayload = Partial<
   Pick<BookingDraft, "email" | "firstName" | "lastName" | "message" | "phone">
@@ -71,6 +81,19 @@ type ConversationContextPayload = {
   statusLabel?: string;
 };
 
+type PersistedWorkflowUiState = Pick<
+  OpenRideWorkflowState,
+  | "activeConversationId"
+  | "authVariant"
+  | "availabilityDraft"
+  | "bookingDraft"
+  | "publishDraft"
+  | "publishMode"
+  | "rideRequestDraft"
+  | "searchMode"
+  | "selectedRideId"
+>;
+
 type OpenRideWorkflowContextValue = {
   activeConversation: Conversation | null;
   availabilityDraft: DriverAvailabilityDraft;
@@ -78,43 +101,34 @@ type OpenRideWorkflowContextValue = {
   cancelAvailability: (availabilityId: string) => void;
   cancelRideRequest: (requestId: string) => void;
   completeBooking: (payload: CompleteBookingPayload) => PassengerTrip | null;
-  completeSetupProfile: (payload: Partial<UserProfile>) => void;
-  completeTrustCenter: () => void;
   conversations: Conversation[];
-  createRideRequest: (payload: Partial<RiderRequestDraft>) => RiderRequestPost;
   driverAvailabilities: DriverAvailabilityPost[];
   getDriverRequestMatches: (availabilityId?: string) => MatchSuggestion[];
   getNextRoute: () => string;
   getSearchMatches: (request?: Partial<RiderRequestDraft | RiderRequestPost>) => MatchSuggestion[];
-  isAuthenticated: boolean;
-  login: (variant: AuthVariant, payload?: AuthFormPayload) => string;
-  logout: () => void;
-  onboardingStep: OnboardingStep;
-  openConversationForContext: (payload: ConversationContextPayload) => Conversation | null;
-  openConversationForRide: (rideId: string) => Conversation | null;
+  myDriverAvailabilities: DriverAvailabilityPost[];
+  myRideRequests: RiderRequestPost[];
+  openConversationForContext: (payload: ConversationContextPayload) => Promise<Conversation | null>;
+  openConversationForRide: (rideId: string) => Promise<Conversation | null>;
   passengerTrips: PassengerTrip[];
   profileCompleted: boolean;
-  publishAvailability: (payload: Partial<DriverAvailabilityDraft>) => DriverAvailabilityPost;
   publishDraft: PublishDraft;
   publishMode: PublishMode;
-  publishTrip: (payload: Partial<PublishDraft>) => PublishedTrip;
   publishedTrips: PublishedTrip[];
   rideRequestDraft: RiderRequestDraft;
   rideRequests: RiderRequestPost[];
   saveAvailabilityDraft: (payload: Partial<DriverAvailabilityDraft>) => void;
   savePublishDraft: (payload: Partial<PublishDraft>) => void;
   searchMode: SearchMode;
-  searchRides: OpenRideWorkflowState["rides"];
+  searchRides: Ride[];
   selectedRide: Ride | null;
   sendMessage: (text: string) => void;
   setActiveConversation: (conversationId: string) => void;
   setPublishMode: (mode: PublishMode) => void;
   setSearchMode: (mode: SearchMode) => void;
   setSelectedRide: (rideId: string) => void;
-  signup: (variant: AuthVariant, payload?: AuthFormPayload) => string;
   trustCompleted: boolean;
   updateBookingDraft: (payload: Partial<BookingDraft>) => void;
-  updateProfile: (payload: Partial<UserProfile>) => void;
   updateRideRequestDraft: (payload: Partial<RiderRequestDraft>) => void;
   user: UserProfile | null;
 };
@@ -138,25 +152,66 @@ function normalizeUserProfile(
   };
 }
 
-function getInitialWorkflowState(): OpenRideWorkflowState {
+function getDefaultUiState(): PersistedWorkflowUiState {
+  const base = createInitialWorkflowState();
+
+  return {
+    activeConversationId: base.activeConversationId,
+    authVariant: base.authVariant,
+    availabilityDraft: base.availabilityDraft,
+    bookingDraft: base.bookingDraft,
+    publishDraft: base.publishDraft,
+    publishMode: base.publishMode,
+    rideRequestDraft: base.rideRequestDraft,
+    searchMode: base.searchMode,
+    selectedRideId: base.selectedRideId,
+  };
+}
+
+function getInitialUiState(): PersistedWorkflowUiState {
   if (typeof window === "undefined") {
-    return createInitialWorkflowState();
+    return getDefaultUiState();
   }
 
   const rawState = window.localStorage.getItem(openRideWorkflowStorageKey);
-
   if (!rawState) {
-    return createInitialWorkflowState();
+    return getDefaultUiState();
   }
 
   try {
+    const parsed = JSON.parse(rawState) as Partial<OpenRideWorkflowState>;
+    const base = getDefaultUiState();
+
     return {
-      ...createInitialWorkflowState(),
-      ...JSON.parse(rawState),
-    } as OpenRideWorkflowState;
+      ...base,
+      ...parsed,
+      availabilityDraft: {
+        ...base.availabilityDraft,
+        ...parsed.availabilityDraft,
+      },
+      bookingDraft: {
+        ...base.bookingDraft,
+        ...parsed.bookingDraft,
+      },
+      publishDraft: {
+        ...base.publishDraft,
+        ...parsed.publishDraft,
+      },
+      rideRequestDraft: {
+        ...base.rideRequestDraft,
+        ...parsed.rideRequestDraft,
+      },
+    };
   } catch {
-    return createInitialWorkflowState();
+    return getDefaultUiState();
   }
+}
+
+function toPersistedWorkflowState(uiState: PersistedWorkflowUiState): OpenRideWorkflowState {
+  return {
+    ...createInitialWorkflowState(),
+    ...uiState,
+  };
 }
 
 function normalizeText(value: string | null | undefined) {
@@ -220,14 +275,6 @@ function splitRouteLabel(routeLabel: string) {
     destination: destination ?? "",
     origin: origin ?? "",
   };
-}
-
-function buildRequestRouteLabel(origin: string, destination: string) {
-  return `${origin || "Départ"} → ${destination || "Arrivée"}`;
-}
-
-function buildAvailabilityRouteLabel(zone: string) {
-  return `Disponible depuis ${zone || "votre zone"}`;
 }
 
 function requestMatchesRide(query: Partial<RiderRequestDraft | RiderRequestPost>, ride: Ride) {
@@ -344,7 +391,123 @@ function createMatchFromRequest(request: RiderRequestPost): MatchSuggestion {
   };
 }
 
-export function getNextWorkflowRoute(state: OpenRideWorkflowState) {
+function isUuid(value: string | null | undefined) {
+  return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(value));
+}
+
+function formatMessageTimestamp(isoString: string) {
+  if (!isoString) {
+    return "";
+  }
+
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    if (diffDays === 1) {
+      return "Hier";
+    }
+
+    if (diffDays < 7) {
+      const days = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+      return days[date.getDay()];
+    }
+
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  } catch {
+    return "";
+  }
+}
+
+function mapDbMessage(
+  message: Record<string, unknown>,
+  currentUserId: string,
+): ConversationMessage {
+  return {
+    attachmentImage:
+      typeof message.attachment_url === "string" ? message.attachment_url : undefined,
+    attachmentLabel: "Pièce jointe",
+    id: String(message.id ?? `message-${Date.now()}`),
+    sender: String(message.sender_id ?? "") === currentUserId ? "me" : "them",
+    text: String(message.text ?? ""),
+    timestamp: formatMessageTimestamp(String(message.created_at ?? "")),
+  };
+}
+
+function mergeById<T extends { id: string }>(...collections: T[][]) {
+  const merged = new Map<string, T>();
+
+  collections.flat().forEach((item) => {
+    merged.set(item.id, item);
+  });
+
+  return Array.from(merged.values());
+}
+
+function getPaymentStateLabel(paymentStatus: PassengerTrip["paymentStatus"]) {
+  if (paymentStatus === "cash_pending") {
+    return "À payer en cash";
+  }
+
+  if (paymentStatus === "authorized") {
+    return "Paiement autorisé";
+  }
+
+  return "Payé en ligne";
+}
+
+function enrichConversation(
+  conversation: Conversation,
+  rides: Ride[],
+  availabilities: DriverAvailabilityPost[],
+  requests: RiderRequestPost[],
+  bookings: PassengerTrip[],
+) {
+  if (conversation.contextType === "ride") {
+    const ride = rides.find((entry) => entry.id === conversation.rideId);
+    const booking = bookings.find((entry) => entry.rideId === conversation.rideId);
+
+    return {
+      ...conversation,
+      paymentStateLabel: booking
+        ? getPaymentStateLabel(booking.paymentStatus)
+        : conversation.paymentStateLabel || "Discussion en cours",
+      routeLabel: ride?.routeLabel ?? conversation.routeLabel,
+      statusLabel: booking ? "Réservation confirmée" : "Trajet planifié",
+    };
+  }
+
+  if (conversation.contextType === "availability") {
+    const availability = availabilities.find((entry) => entry.id === conversation.rideId);
+
+    return {
+      ...conversation,
+      paymentStateLabel: conversation.paymentStateLabel || "À convenir",
+      routeLabel: availability?.routeLabel ?? conversation.routeLabel,
+      statusLabel: "Disponibilité active",
+    };
+  }
+
+  const request = requests.find((entry) => entry.id === conversation.rideId);
+
+  return {
+    ...conversation,
+    paymentStateLabel: conversation.paymentStateLabel || "Discussion en cours",
+    routeLabel: request?.routeLabel ?? conversation.routeLabel,
+    statusLabel: "Demande active",
+  };
+}
+
+export function getNextWorkflowRoute(state: Pick<
+  OpenRideWorkflowState,
+  "authStatus" | "profileCompleted" | "trustCompleted"
+>) {
   if (state.authStatus !== "authenticated") {
     return "/auth";
   }
@@ -365,531 +528,407 @@ type OpenRideWorkflowProviderProps = {
 };
 
 export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderProps) {
-  const [state, setState] = useState<OpenRideWorkflowState>(getInitialWorkflowState);
+  const [uiState, setUiState] = useState<PersistedWorkflowUiState>(getInitialUiState);
+  const [optimisticConversations, setOptimisticConversations] = useState<Record<string, Conversation>>({});
+  const [optimisticMessages, setOptimisticMessages] = useState<Record<string, ConversationMessage[]>>({});
   const { user: authUser } = useAuth();
+  const profileQuery = useProfile(authUser?.id);
+  const publishedTripsQuery = useTrips();
+  const myTripsQuery = useMyTrips();
+  const myBookingsQuery = useMyBookings();
+  const publicAvailabilitiesQuery = useDriverAvailabilities();
+  const myAvailabilitiesQuery = useMyAvailabilities();
+  const publicRequestsQuery = useRideRequests();
+  const myRequestsQuery = useMyRequests();
+  const conversationsQuery = useConversations();
+  const createConversationMutation = useCreateConversation();
+  const sendMessageMutation = useSendMessage();
+  const cancelAvailabilityMutation = useCancelAvailability();
+  const cancelRideRequestMutation = useCancelRideRequest();
 
-  // Persist to localStorage
-  useEffect(() => {
-    window.localStorage.setItem(openRideWorkflowStorageKey, JSON.stringify(state));
-  }, [state]);
+  const authStatus = authUser ? "authenticated" : "anonymous";
+  const authMetadata = (authUser?.user_metadata as Record<string, unknown> | undefined) ?? {};
+  const fallbackUser = authUser
+    ? normalizeUserProfile(defaultUserProfile, {
+        email: authUser.email ?? "",
+        firstName: String(authMetadata.first_name ?? ""),
+        fullName: `${String(authMetadata.first_name ?? "")} ${String(authMetadata.last_name ?? "")}`.trim(),
+        lastName: String(authMetadata.last_name ?? ""),
+        phone: String(authMetadata.phone ?? ""),
+      })
+    : null;
+  const user = profileQuery.data
+    ? dbProfileToUserProfile(profileQuery.data as Record<string, unknown>)
+    : fallbackUser;
+  const profileCompleted = Boolean((profileQuery.data as Record<string, unknown> | null)?.first_name || user?.firstName);
+  const trustCompleted = Boolean(
+    (profileQuery.data as Record<string, unknown> | null)?.email_verified &&
+      (profileQuery.data as Record<string, unknown> | null)?.phone_verified,
+  );
 
-  // ═══════════════════════════════════════════════
-  // SUPABASE HYDRATION: Load real data on auth change
-  // ═══════════════════════════════════════════════
   useEffect(() => {
-    if (!authUser) {
-      setState((current) => ({
-        ...current,
-        authStatus: "anonymous",
-        user: null,
-        rides: [],
-        passengerTrips: [],
-        publishedTrips: [],
-        driverAvailabilities: [],
-        rideRequests: [],
-        conversations: [],
-      }));
+    if (typeof window === "undefined") {
       return;
     }
 
-    // Set authenticated immediately
-    setState((current) => ({
+    window.localStorage.setItem(
+      openRideWorkflowStorageKey,
+      JSON.stringify(toPersistedWorkflowState(uiState)),
+    );
+  }, [uiState]);
+
+  useEffect(() => {
+    if (authUser) {
+      return;
+    }
+
+    setUiState((current) => ({
       ...current,
-      authStatus: "authenticated",
+      activeConversationId: null,
+      bookingDraft: defaultBookingDraft(null),
+      selectedRideId: null,
     }));
+    setOptimisticConversations({});
+    setOptimisticMessages({});
+  }, [authUser]);
 
-    const hydrate = async () => {
-      try {
-        const userId = authUser.id;
+  const searchRides = useMemo(() => {
+    const rows = (publishedTripsQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows
+      .map((row) => dbTripToRide(row))
+      .filter((ride) => ride.driverId !== authUser?.id);
+  }, [authUser?.id, publishedTripsQuery.data]);
 
-        // Fetch all data in parallel
-        const [
-          profileRes,
-          allTripsRes,
-          myTripsRes,
-          bookingsRes,
-          allAvailRes,
-          allRequestsRes,
-          myRequestsRes,
-        ] = await Promise.all([
-          supabase.from("profiles").select("*").eq("id", userId).single(),
-          supabase
-            .from("trips")
-            .select("*, driver:profiles(*)")
-            .eq("status", "published")
-            .order("date", { ascending: true }),
-          supabase
-            .from("trips")
-            .select("*")
-            .eq("driver_id", userId)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("bookings")
-            .select("*, trip:trips(*, driver:profiles(*))")
-            .eq("passenger_id", userId)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("driver_availabilities")
-            .select("*, driver:profiles(*)")
-            .eq("status", "active")
-            .order("date", { ascending: true }),
-          supabase
-            .from("ride_requests")
-            .select("*, passenger:profiles(*)")
-            .eq("status", "active")
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("ride_requests")
-            .select("*, passenger:profiles(*)")
-            .eq("passenger_id", userId)
-            .order("created_at", { ascending: false }),
-        ]);
+  const myRideDetails = useMemo(() => {
+    const rows = (myTripsQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows.map((row) => dbTripToRide(row));
+  }, [myTripsQuery.data]);
 
-        // Fetch conversations
-        const { data: participations } = await supabase
-          .from("conversation_participants")
-          .select("conversation_id")
-          .eq("user_id", userId);
+  const passengerRideDetails = useMemo(() => {
+    const rows = (myBookingsQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows
+      .map((row) => row.trip as Record<string, unknown> | undefined)
+      .filter((row): row is Record<string, unknown> => Boolean(row))
+      .map((row) => dbTripToRide(row));
+  }, [myBookingsQuery.data]);
 
-        const convoIds = (participations ?? []).map((p) => p.conversation_id as string);
-        let conversations: Conversation[] = [];
+  const allRideDetails = useMemo(
+    () => mergeById(searchRides, myRideDetails, passengerRideDetails),
+    [myRideDetails, passengerRideDetails, searchRides],
+  );
 
-        if (convoIds.length > 0) {
-          const { data: convosData } = await supabase
-            .from("conversations")
-            .select("*, participants:conversation_participants(*, profile:profiles(*))")
-            .in("id", convoIds)
-            .order("created_at", { ascending: false });
+  const passengerTrips = useMemo(() => {
+    const rows = (myBookingsQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows.map((row) => dbBookingToPassengerTrip(row));
+  }, [myBookingsQuery.data]);
 
-          if (convosData) {
-            conversations = await Promise.all(
-              convosData.map(async (convo) => {
-                const { data: msgs } = await supabase
-                  .from("messages")
-                  .select("*")
-                  .eq("conversation_id", convo.id as string)
-                  .order("created_at", { ascending: true });
-                return dbConversationToConversation(
-                  convo as Record<string, unknown>,
-                  (msgs ?? []) as Record<string, unknown>[],
-                  userId,
-                );
-              }),
-            );
-          }
+  const publishedTrips = useMemo(() => {
+    const rows = (myTripsQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows.map((row) => dbTripToPublishedTrip(row));
+  }, [myTripsQuery.data]);
+
+  const driverAvailabilities = useMemo(() => {
+    const rows = (publicAvailabilitiesQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows
+      .map((row) => dbAvailabilityToPost(row))
+      .filter((availability) => availability.driverId !== authUser?.id);
+  }, [authUser?.id, publicAvailabilitiesQuery.data]);
+
+  const myDriverAvailabilities = useMemo(() => {
+    const rows = (myAvailabilitiesQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows.map((row) => dbAvailabilityToPost(row));
+  }, [myAvailabilitiesQuery.data]);
+
+  const rideRequests = useMemo(() => {
+    const rows = (publicRequestsQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows
+      .map((row) => dbRequestToPost(row))
+      .filter((request) => request.passengerId !== authUser?.id);
+  }, [authUser?.id, publicRequestsQuery.data]);
+
+  const myRideRequests = useMemo(() => {
+    const rows = (myRequestsQuery.data ?? []) as Array<Record<string, unknown>>;
+    return rows.map((row) => dbRequestToPost(row));
+  }, [myRequestsQuery.data]);
+
+  const selectedRide = useMemo(() => {
+    const selectedId = uiState.selectedRideId ?? uiState.bookingDraft.rideId;
+    if (selectedId) {
+      return allRideDetails.find((ride) => ride.id === selectedId) ?? null;
+    }
+
+    return searchRides[0] ?? allRideDetails[0] ?? null;
+  }, [allRideDetails, searchRides, uiState.bookingDraft.rideId, uiState.selectedRideId]);
+
+  const baseConversations = useMemo(() => {
+    if (!authUser) {
+      return [];
+    }
+
+    const availabilityIndex = mergeById(driverAvailabilities, myDriverAvailabilities);
+    const requestIndex = mergeById(rideRequests, myRideRequests);
+
+    return ((conversationsQuery.data ?? []) as Array<Record<string, unknown>>).map((row) => {
+      const latestMessage = row.latest_message
+        ? [row.latest_message as Record<string, unknown>]
+        : [];
+
+      return enrichConversation(
+        dbConversationToConversation(row, latestMessage, authUser.id),
+        allRideDetails,
+        availabilityIndex,
+        requestIndex,
+        passengerTrips,
+      );
+    });
+  }, [
+    allRideDetails,
+    authUser,
+    conversationsQuery.data,
+    driverAvailabilities,
+    myDriverAvailabilities,
+    myRideRequests,
+    passengerTrips,
+    rideRequests,
+  ]);
+
+  const inferredActiveConversationId =
+    uiState.activeConversationId ??
+    baseConversations[0]?.id ??
+    Object.keys(optimisticConversations)[0] ??
+    null;
+  const activeMessagesQuery = useMessages(
+    isUuid(inferredActiveConversationId) ? inferredActiveConversationId : undefined,
+  );
+
+  useEffect(() => {
+    if (!baseConversations.length) {
+      return;
+    }
+
+    setOptimisticConversations((current) => {
+      const next = { ...current };
+      let changed = false;
+
+      Object.keys(next).forEach((conversationId) => {
+        if (baseConversations.some((conversation) => conversation.id === conversationId)) {
+          delete next[conversationId];
+          changed = true;
         }
+      });
 
-        // Map data
-        const profile = profileRes.data as Record<string, unknown> | null;
-        const userProfile = profile ? dbProfileToUserProfile(profile) : null;
-        const profileCompleted = !!(profile?.first_name);
+      return changed ? next : current;
+    });
+  }, [baseConversations]);
 
-        const allRides = (allTripsRes.data ?? []).map((t) =>
-          dbTripToRide(t as Record<string, unknown>),
-        );
+  useEffect(() => {
+    if (!inferredActiveConversationId || !(activeMessagesQuery.data?.length)) {
+      return;
+    }
 
-        const passengerTrips = (bookingsRes.data ?? []).map((b) =>
-          dbBookingToPassengerTrip(b as Record<string, unknown>),
-        );
-
-        const publishedTrips = (myTripsRes.data ?? []).map((t) =>
-          dbTripToPublishedTrip(t as Record<string, unknown>),
-        );
-
-        const driverAvailabilities = (allAvailRes.data ?? []).map((a) =>
-          dbAvailabilityToPost(a as Record<string, unknown>),
-        );
-
-        const rideRequests = (allRequestsRes.data ?? []).map((r) =>
-          dbRequestToPost(r as Record<string, unknown>),
-        );
-
-        setState((current) => ({
-          ...current,
-          authStatus: "authenticated",
-          user: userProfile ?? current.user,
-          profileCompleted,
-          trustCompleted: profileCompleted, // Trust considered done if profile is set up
-          onboardingStep: profileCompleted ? "complete" : "setup-profile",
-          rides: allRides,
-          passengerTrips,
-          publishedTrips,
-          driverAvailabilities,
-          rideRequests,
-          conversations,
-          selectedRideId: allRides[0]?.id ?? current.selectedRideId,
-          activeConversationId: conversations[0]?.id ?? current.activeConversationId,
-          bookingDraft: {
-            ...current.bookingDraft,
-            email: userProfile?.email ?? current.bookingDraft.email,
-            firstName: userProfile?.firstName ?? current.bookingDraft.firstName,
-            lastName: userProfile?.lastName ?? current.bookingDraft.lastName,
-            phone: userProfile?.phone ?? current.bookingDraft.phone,
-            rideId: allRides[0]?.id ?? current.bookingDraft.rideId,
-          },
-        }));
-      } catch (error) {
-        console.error("Supabase hydration error:", error);
+    setOptimisticMessages((current) => {
+      if (!current[inferredActiveConversationId]?.length) {
+        return current;
       }
-    };
 
-    hydrate();
-  }, [authUser?.id]);
+      const next = { ...current };
+      delete next[inferredActiveConversationId];
+      return next;
+    });
+  }, [activeMessagesQuery.data?.length, inferredActiveConversationId]);
 
-  const value = useMemo<OpenRideWorkflowContextValue>(() => {
-    const selectedRide =
-      state.rides.find((ride) => ride.id === state.selectedRideId) ?? state.rides[0] ?? null;
-    const activeConversation =
-      state.conversations.find((conversation) => conversation.id === state.activeConversationId) ??
-      null;
+  const conversations = useMemo(() => {
+    const merged = mergeById(
+      baseConversations,
+      Object.values(optimisticConversations),
+    ).map((conversation) => {
+      if (conversation.id !== inferredActiveConversationId) {
+        return conversation;
+      }
 
-    const updateProfile = (payload: Partial<UserProfile>) => {
-      setState((current) => ({
-        ...current,
-        user: normalizeUserProfile(current.user, payload),
-      }));
-    };
+      const activeMessages = (activeMessagesQuery.data ?? []) as Array<Record<string, unknown>>;
+      const persistedMessages = authUser
+        ? activeMessages.map((message) => mapDbMessage(message, authUser.id))
+        : conversation.messages;
+      const nextMessages = [
+        ...persistedMessages,
+        ...(optimisticMessages[conversation.id] ?? []),
+      ];
+      const lastMessage = nextMessages[nextMessages.length - 1];
 
-    const setSelectedRide = (rideId: string) => {
-      setState((current) => ({
-        ...current,
-        bookingDraft: {
-          ...current.bookingDraft,
-          rideId,
-        },
-        selectedRideId: rideId,
-      }));
-    };
+      return {
+        ...conversation,
+        lastMessage: lastMessage?.text ?? conversation.lastMessage,
+        lastTimestamp: lastMessage?.timestamp ?? conversation.lastTimestamp,
+        messages: nextMessages,
+        unread: false,
+      };
+    });
 
-    const updateBookingDraft = (payload: Partial<BookingDraft>) => {
-      setState((current) => ({
-        ...current,
-        bookingDraft: {
-          ...current.bookingDraft,
-          ...payload,
-        },
-      }));
-    };
+    return merged;
+  }, [
+    activeMessagesQuery.data,
+    authUser,
+    baseConversations,
+    inferredActiveConversationId,
+    optimisticConversations,
+    optimisticMessages,
+  ]);
 
-    const setPublishMode = (mode: PublishMode) => {
-      setState((current) => ({
-        ...current,
-        publishMode: mode,
-      }));
-    };
+  const activeConversation = useMemo(() => {
+    if (!conversations.length) {
+      return null;
+    }
 
-    const setSearchMode = (mode: SearchMode) => {
-      setState((current) => ({
-        ...current,
-        searchMode: mode,
-      }));
-    };
+    if (inferredActiveConversationId) {
+      return (
+        conversations.find((conversation) => conversation.id === inferredActiveConversationId) ??
+        conversations[0]
+      );
+    }
 
-    const savePublishDraft = (payload: Partial<PublishDraft>) => {
-      setState((current) => ({
-        ...current,
-        publishDraft: {
-          ...current.publishDraft,
-          ...payload,
-        },
-      }));
-    };
+    return conversations[0];
+  }, [conversations, inferredActiveConversationId]);
 
-    const saveAvailabilityDraft = (payload: Partial<DriverAvailabilityDraft>) => {
-      setState((current) => ({
-        ...current,
-        availabilityDraft: {
-          ...current.availabilityDraft,
-          ...payload,
-        },
-      }));
-    };
+  const setActiveConversation = useCallback((conversationId: string) => {
+    setUiState((current) => ({
+      ...current,
+      activeConversationId: conversationId,
+    }));
+  }, []);
 
-    const updateRideRequestDraft = (payload: Partial<RiderRequestDraft>) => {
-      setState((current) => ({
-        ...current,
-        rideRequestDraft: {
-          ...current.rideRequestDraft,
-          ...payload,
-        },
-      }));
-    };
+  const setSelectedRide = useCallback((rideId: string) => {
+    setUiState((current) => ({
+      ...current,
+      bookingDraft: {
+        ...current.bookingDraft,
+        rideId,
+      },
+      selectedRideId: rideId,
+    }));
+  }, []);
 
-    const login = (variant: AuthVariant, payload?: AuthFormPayload) => {
-      let nextRoute = "/search-results";
+  const setPublishMode = useCallback((mode: PublishMode) => {
+    setUiState((current) => ({
+      ...current,
+      publishMode: mode,
+    }));
+  }, []);
 
-      setState((current) => {
-        const nextUser = normalizeUserProfile(current.user, payload ?? {});
-        const nextState: OpenRideWorkflowState = {
-          ...current,
-          authStatus: "authenticated",
-          authVariant: variant,
-          user: nextUser,
-        };
-        nextRoute = getNextWorkflowRoute(nextState);
-        return nextState;
-      });
+  const setSearchMode = useCallback((mode: SearchMode) => {
+    setUiState((current) => ({
+      ...current,
+      searchMode: mode,
+    }));
+  }, []);
 
-      return nextRoute;
-    };
-
-    const signup = (variant: AuthVariant, payload?: AuthFormPayload) => {
-      const firstName = payload?.firstName?.trim() || "New";
-      const lastName = payload?.lastName?.trim() || "Member";
-      const nextUser = normalizeUserProfile(defaultUserProfile, {
+  const saveAvailabilityDraft = useCallback((payload: Partial<DriverAvailabilityDraft>) => {
+    setUiState((current) => ({
+      ...current,
+      availabilityDraft: {
+        ...current.availabilityDraft,
         ...payload,
-        email: payload?.email?.trim() || defaultUserProfile.email,
-        firstName,
-        fullName: `${firstName} ${lastName}`.trim(),
-        lastName,
-        miniRoleLabel: "Nouvel utilisateur",
-        phone: payload?.phone?.trim() || defaultUserProfile.phone,
-        reviewCount: 0,
-        tripCount: 0,
-        verification: {
-          emailVerified: false,
-          idVerified: false,
-          phoneVerified: false,
-        },
-      });
+      },
+    }));
+  }, []);
 
-      setState((current) => ({
-        ...current,
-        activeConversationId: null,
-        authStatus: "authenticated",
-        authVariant: variant,
-        bookingDraft: defaultBookingDraft(current.selectedRideId ?? current.rides[0]?.id ?? null),
-        conversations: [],
-        onboardingStep: "setup-profile",
-        passengerTrips: [],
-        profileCompleted: false,
-        publishedTrips: [],
-        trustCompleted: false,
-        user: nextUser,
-      }));
+  const savePublishDraft = useCallback((payload: Partial<PublishDraft>) => {
+    setUiState((current) => ({
+      ...current,
+      publishDraft: {
+        ...current.publishDraft,
+        ...payload,
+      },
+    }));
+  }, []);
 
-      return "/setup-profile";
-    };
+  const updateBookingDraft = useCallback((payload: Partial<BookingDraft>) => {
+    setUiState((current) => ({
+      ...current,
+      bookingDraft: {
+        ...current.bookingDraft,
+        ...payload,
+      },
+    }));
+  }, []);
 
-    const completeSetupProfile = (payload: Partial<UserProfile>) => {
-      setState((current) => ({
-        ...current,
-        onboardingStep: "trust-center",
-        profileCompleted: true,
-        user: normalizeUserProfile(current.user, payload),
-      }));
-    };
+  const updateRideRequestDraft = useCallback((payload: Partial<RiderRequestDraft>) => {
+    setUiState((current) => ({
+      ...current,
+      rideRequestDraft: {
+        ...current.rideRequestDraft,
+        ...payload,
+      },
+    }));
+  }, []);
 
-    const completeTrustCenter = () => {
-      setState((current) => ({
-        ...current,
-        onboardingStep: "complete",
-        trustCompleted: true,
-        user: current.user
-          ? {
-              ...current.user,
-              verification: {
-                ...current.user.verification,
-                emailVerified: true,
-                phoneVerified: true,
-              },
-            }
-          : current.user,
-      }));
-    };
+  const getSearchMatches = useCallback(
+    (request?: Partial<RiderRequestDraft | RiderRequestPost>) => {
+      const query = request ?? uiState.rideRequestDraft;
 
-    const publishTrip = (payload: Partial<PublishDraft>) => {
-      let publishedTrip: PublishedTrip = {
-        departureLabel: "Aujourd'hui, 08:00",
-        id: `published-${Date.now()}`,
-        kind: "upcoming",
-        passengersLabel: "3 places restantes",
-        price: 35,
-        rideId: `published-${Date.now()}`,
-        routeLabel: "Paris → Lyon",
-        seatsAvailable: 3,
-        status: "published",
-        vehicleName: "Peugeot 3008",
-      };
+      const rideMatches = searchRides
+        .filter((ride) => requestMatchesRide(query, ride))
+        .map(createMatchFromRide);
+      const availabilityMatches = driverAvailabilities
+        .filter(
+          (availability) =>
+            availability.kind === "active" && requestMatchesAvailability(query, availability),
+        )
+        .map(createMatchFromAvailability);
 
-      setState((current) => {
-        const nextDraft = {
-          ...current.publishDraft,
-          ...payload,
-        };
+      return [...rideMatches, ...availabilityMatches];
+    },
+    [driverAvailabilities, searchRides, uiState.rideRequestDraft],
+  );
 
-        publishedTrip = {
-          departureLabel:
-            nextDraft.date && nextDraft.time
-              ? `${nextDraft.date}, ${nextDraft.time}`
-              : "Départ à confirmer",
-          id: `published-${Date.now()}`,
-          kind: "upcoming",
-          passengersLabel: `${nextDraft.seats} places restantes`,
-          price: nextDraft.price,
-          rideId: `ride-published-${Date.now()}`,
-          routeLabel: `${nextDraft.departure || "Départ"} → ${nextDraft.destination || "Arrivée"}`,
-          seatsAvailable: nextDraft.seats,
-          status: "published",
-          vehicleName: nextDraft.vehicleName,
-        };
+  const getDriverRequestMatches = useCallback(
+    (availabilityId?: string) => {
+      const availability =
+        availabilityId
+          ? myDriverAvailabilities.find((entry) => entry.id === availabilityId) ??
+            driverAvailabilities.find((entry) => entry.id === availabilityId)
+          : null;
 
-        return {
-          ...current,
-          publishDraft: nextDraft,
-          publishedTrips: [publishedTrip, ...current.publishedTrips],
-        };
-      });
+      return rideRequests
+        .filter(
+          (request) =>
+            request.kind === "active" &&
+            availabilityMatchesRequest(
+              availability ?? uiState.availabilityDraft,
+              request,
+            ),
+        )
+        .map(createMatchFromRequest);
+    },
+    [driverAvailabilities, myDriverAvailabilities, rideRequests, uiState.availabilityDraft],
+  );
 
-      return publishedTrip;
-    };
+  const findOtherUserId = useCallback(
+    (contextType: MatchContextType, contextId: string) => {
+      if (contextType === "ride") {
+        return allRideDetails.find((ride) => ride.id === contextId)?.driverId ?? null;
+      }
 
-    const publishAvailability = (payload: Partial<DriverAvailabilityDraft>) => {
-      let publishedAvailability: DriverAvailabilityPost = {
-        date: state.availabilityDraft.date || new Date().toISOString().split("T")[0],
-        driverAvatar: DEFAULT_AVATAR,
-        driverName: state.user?.fullName || "Conducteur OpenRide",
-        driverRating: state.user?.rating ?? 4.8,
-        id: `availability-${Date.now()}`,
-        kind: "active",
-        notes: state.availabilityDraft.notes,
-        routeLabel: buildAvailabilityRouteLabel(state.availabilityDraft.zone),
-        seats: state.availabilityDraft.seats,
-        timeWindow: formatTimeWindow(
-          state.availabilityDraft.startTime,
-          state.availabilityDraft.endTime,
-        ),
-        vehicleName: state.availabilityDraft.vehicleName,
-        zone: state.availabilityDraft.zone,
-      };
+      if (contextType === "availability") {
+        return (
+          myDriverAvailabilities.find((entry) => entry.id === contextId)?.driverId ??
+          driverAvailabilities.find((entry) => entry.id === contextId)?.driverId ??
+          null
+        );
+      }
 
-      setState((current) => {
-        const nextDraft = {
-          ...current.availabilityDraft,
-          ...payload,
-        };
+      return (
+        myRideRequests.find((entry) => entry.id === contextId)?.passengerId ??
+        rideRequests.find((entry) => entry.id === contextId)?.passengerId ??
+        null
+      );
+    },
+    [allRideDetails, driverAvailabilities, myDriverAvailabilities, myRideRequests, rideRequests],
+  );
 
-        publishedAvailability = {
-          date: nextDraft.date || new Date().toISOString().split("T")[0],
-          driverAvatar: DEFAULT_AVATAR,
-          driverName: current.user?.fullName || "Conducteur OpenRide",
-          driverRating: current.user?.rating ?? 4.8,
-          id: `availability-${Date.now()}`,
-          kind: "active",
-          notes: nextDraft.notes,
-          routeLabel: buildAvailabilityRouteLabel(nextDraft.zone),
-          seats: nextDraft.seats,
-          timeWindow: formatTimeWindow(nextDraft.startTime, nextDraft.endTime),
-          vehicleName: nextDraft.vehicleName,
-          zone: nextDraft.zone,
-        };
-
-        return {
-          ...current,
-          availabilityDraft: nextDraft,
-          driverAvailabilities: [publishedAvailability, ...current.driverAvailabilities],
-        };
-      });
-
-      return publishedAvailability;
-    };
-
-    const createRideRequest = (payload: Partial<RiderRequestDraft>) => {
-      let requestPost: RiderRequestPost = {
-        date: state.rideRequestDraft.date || new Date().toISOString().split("T")[0],
-        destination: state.rideRequestDraft.destination,
-        id: `request-${Date.now()}`,
-        kind: "active",
-        notes: state.rideRequestDraft.notes,
-        origin: state.rideRequestDraft.origin,
-        passengerAvatar: DEFAULT_AVATAR,
-        passengerName: state.user?.fullName || "Passager OpenRide",
-        routeLabel: buildRequestRouteLabel(
-          state.rideRequestDraft.origin,
-          state.rideRequestDraft.destination,
-        ),
-        seatCount: state.rideRequestDraft.seatCount,
-        timeWindow: formatTimeWindow(
-          state.rideRequestDraft.startTime,
-          state.rideRequestDraft.endTime,
-        ),
-      };
-
-      setState((current) => {
-        const nextDraft = {
-          ...current.rideRequestDraft,
-          ...payload,
-        };
-
-        requestPost = {
-          date: nextDraft.date || new Date().toISOString().split("T")[0],
-          destination: nextDraft.destination,
-          id: `request-${Date.now()}`,
-          kind: "active",
-          notes: nextDraft.notes,
-          origin: nextDraft.origin,
-          passengerAvatar: DEFAULT_AVATAR,
-          passengerName: current.user?.fullName || "Passager OpenRide",
-          routeLabel: buildRequestRouteLabel(nextDraft.origin, nextDraft.destination),
-          seatCount: nextDraft.seatCount,
-          timeWindow: formatTimeWindow(nextDraft.startTime, nextDraft.endTime),
-        };
-
-        return {
-          ...current,
-          rideRequestDraft: nextDraft,
-          rideRequests: [requestPost, ...current.rideRequests],
-        };
-      });
-
-      return requestPost;
-    };
-
-    const cancelRideRequest = (requestId: string) => {
-      setState((current) => ({
-        ...current,
-        rideRequests: current.rideRequests.map((request) =>
-          request.id === requestId
-            ? {
-                ...request,
-                kind: "cancelled",
-              }
-            : request,
-        ),
-      }));
-    };
-
-    const cancelAvailability = (availabilityId: string) => {
-      setState((current) => ({
-        ...current,
-        driverAvailabilities: current.driverAvailabilities.map((availability) =>
-          availability.id === availabilityId
-            ? {
-                ...availability,
-                kind: "cancelled",
-              }
-            : availability,
-        ),
-      }));
-    };
-
-    const setActiveConversation = (conversationId: string) => {
-      setState((current) => ({
-        ...current,
-        activeConversationId: conversationId,
-        conversations: current.conversations.map((conversation) =>
-          conversation.id === conversationId
-            ? {
-                ...conversation,
-                unread: false,
-              }
-            : conversation,
-        ),
-      }));
-    };
-
-    const openConversationForContext = (payload: ConversationContextPayload) => {
-      const existingConversation = state.conversations.find(
+  const openConversationForContext = useCallback(
+    async (payload: ConversationContextPayload) => {
+      const existingConversation = conversations.find(
         (conversation) =>
           conversation.contextType === payload.contextType &&
           conversation.rideId === payload.contextId,
@@ -900,309 +939,268 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
         return existingConversation;
       }
 
-      const newConversation: Conversation = {
+      const otherUserId = findOtherUserId(payload.contextType, payload.contextId);
+
+      if (!authUser || !otherUserId) {
+        return null;
+      }
+
+      const createdConversation = (await createConversationMutation.mutateAsync({
+        context_id: payload.contextId,
+        context_type: payload.contextType,
+        initial_message: payload.initialMessage,
+        other_user_id: otherUserId,
+        their_role_label: payload.counterpartRoleLabel,
+      })) as Record<string, unknown>;
+      const conversationId = String(createdConversation.id ?? "");
+
+      if (!conversationId) {
+        return null;
+      }
+
+      const previewMessages = payload.initialMessage
+        ? [
+            {
+              id: `message-${conversationId}`,
+              sender: "me" as const,
+              text: payload.initialMessage,
+              timestamp: "Maintenant",
+            },
+          ]
+        : [];
+      const optimisticConversation: Conversation = {
         contextType: payload.contextType,
-        id: `conversation-${payload.contextType}-${payload.contextId}`,
+        id: conversationId,
         isOnline: payload.isOnline ?? true,
-        lastMessage:
-          payload.initialMessage ?? "Bonjour ! Je suis intéressé par cette annonce.",
+        lastMessage: payload.initialMessage ?? "Discussion démarrée",
         lastTimestamp: "Maintenant",
-        messages: [
-          {
-            id: `message-${Date.now()}`,
-            sender: "them",
-            text: payload.initialMessage ?? "Bonjour ! Je suis intéressé par cette annonce.",
-            timestamp: "Maintenant",
-          },
-        ],
+        messages: previewMessages,
         participantAvatar: payload.counterpartAvatar,
         participantName: payload.counterpartName,
         participantRoleLabel: payload.counterpartRoleLabel,
-        paymentStateLabel: payload.paymentStateLabel ?? "À définir",
+        paymentStateLabel: payload.paymentStateLabel ?? "Discussion en cours",
         rideId: payload.contextId,
         routeLabel: payload.routeLabel,
-        statusLabel: payload.statusLabel ?? "En discussion",
+        statusLabel: payload.statusLabel ?? "Conversation active",
         unread: false,
       };
 
-      setState((current) => ({
+      setOptimisticConversations((current) => ({
         ...current,
-        activeConversationId: newConversation.id,
-        conversations: [newConversation, ...current.conversations],
+        [conversationId]: optimisticConversation,
       }));
+      setActiveConversation(conversationId);
 
-      return newConversation;
-    };
+      return optimisticConversation;
+    },
+    [authUser, conversations, createConversationMutation, findOtherUserId, setActiveConversation],
+  );
 
-    const openConversationForRide = (rideId: string) => {
-      const ride = state.rides.find((entry) => entry.id === rideId) ?? selectedRide;
+  const openConversationForRide = useCallback(
+    async (rideId: string) => {
+      const ride = allRideDetails.find((entry) => entry.id === rideId);
 
       if (!ride) {
         return null;
       }
 
+      const booking = passengerTrips.find((entry) => entry.rideId === rideId);
+
       return openConversationForContext({
-        contextId: ride.id,
+        contextId: rideId,
         contextType: "ride",
         counterpartAvatar: ride.driver.avatar,
         counterpartName: ride.driver.name,
         counterpartRoleLabel: "Conducteur",
-        initialMessage: "Bonjour ! Votre réservation est bien enregistrée.",
-        isOnline: true,
-        paymentStateLabel: "Payé en ligne",
+        paymentStateLabel: booking
+          ? getPaymentStateLabel(booking.paymentStatus)
+          : "Discussion en cours",
         routeLabel: ride.routeLabel,
-        statusLabel: "Confirmée",
+        statusLabel: booking ? "Réservation confirmée" : "Trajet planifié",
       });
-    };
+    },
+    [allRideDetails, openConversationForContext, passengerTrips],
+  );
 
-    const getSearchMatches = (request?: Partial<RiderRequestDraft | RiderRequestPost>) => {
-      const query = {
-        ...state.rideRequestDraft,
-        ...request,
+  const sendMessage = useCallback(
+    (text: string) => {
+      const nextText = text.trim();
+      const conversationId = activeConversation?.id;
+
+      if (!nextText || !conversationId || !authUser) {
+        return;
+      }
+
+      const optimisticMessage: ConversationMessage = {
+        id: `message-${Date.now()}`,
+        sender: "me",
+        text: nextText,
+        timestamp: "Maintenant",
       };
 
-      const rideMatches = state.rides
-        .filter((ride) => requestMatchesRide(query, ride))
-        .map(createMatchFromRide);
-      const availabilityMatches = state.driverAvailabilities
-        .filter(
-          (availability) =>
-            availability.kind === "active" && requestMatchesAvailability(query, availability),
-        )
-        .map(createMatchFromAvailability);
+      setOptimisticMessages((current) => ({
+        ...current,
+        [conversationId]: [...(current[conversationId] ?? []), optimisticMessage],
+      }));
 
-      return [...rideMatches, ...availabilityMatches];
-    };
+      if (isUuid(conversationId)) {
+        sendMessageMutation.mutate({
+          conversation_id: conversationId,
+          text: nextText,
+        });
+      }
+    },
+    [activeConversation?.id, authUser, sendMessageMutation],
+  );
 
-    const getDriverRequestMatches = (availabilityId?: string) => {
-      return state.rideRequests
-        .filter(
-          (request) =>
-            request.kind === "active" &&
-            availabilityMatchesRequest(
-              availabilityId
-                ? state.driverAvailabilities.find((entry) => entry.id === availabilityId) ??
-                    defaultAvailabilityDraft
-                : state.availabilityDraft,
-              request,
-            ),
-        )
-        .map(createMatchFromRequest);
-    };
+  const cancelAvailability = useCallback(
+    (availabilityId: string) => {
+      cancelAvailabilityMutation.mutate(availabilityId);
+    },
+    [cancelAvailabilityMutation],
+  );
 
-    const completeBooking = (payload: CompleteBookingPayload) => {
-      const ride =
-        state.rides.find((entry) => entry.id === state.bookingDraft.rideId) ?? selectedRide;
+  const cancelRideRequest = useCallback(
+    (requestId: string) => {
+      cancelRideRequestMutation.mutate(requestId);
+    },
+    [cancelRideRequestMutation],
+  );
+
+  const completeBooking = useCallback(
+    (payload: CompleteBookingPayload) => {
+      const ride = selectedRide;
 
       if (!ride) {
         return null;
       }
 
-      let nextTrip: PassengerTrip | null = null;
+      const paymentMethod = payload.paymentMethod;
+      const paymentStatus =
+        paymentMethod === "cash"
+          ? "cash_pending"
+          : paymentMethod === "wallet"
+            ? "authorized"
+            : "paid";
+      const nextDraft: BookingDraft = {
+        ...uiState.bookingDraft,
+        ...payload,
+        paymentMethod,
+        rideId: ride.id,
+        seatCount: payload.seatCount ?? uiState.bookingDraft.seatCount,
+      };
 
-      setState((current) => {
-        const paymentMethod = payload.paymentMethod;
-        const paymentStatus =
-          paymentMethod === "cash"
-            ? "cash_pending"
-            : paymentMethod === "wallet"
-              ? "authorized"
-              : "paid";
-        const paymentStateLabel =
-          paymentMethod === "cash"
-            ? "À payer en cash"
-            : paymentMethod === "wallet"
-              ? "Autorisé"
-              : "Payé en ligne";
-        const initialMessage =
-          paymentMethod === "cash"
-            ? "Bonjour ! Réservation confirmée, paiement en cash au départ."
-            : "Bonjour ! Votre réservation est bien enregistrée.";
-        const nextDraft: BookingDraft = {
-          ...current.bookingDraft,
-          ...payload,
-          paymentMethod,
-          rideId: ride.id,
-          seatCount: payload.seatCount ?? current.bookingDraft.seatCount,
-        };
-        const existingConversation = current.conversations.find(
-          (conversation) => conversation.contextType === "ride" && conversation.rideId === ride.id,
-        );
-        const nextConversation =
-          existingConversation ??
-          ({
-            contextType: "ride",
-            id: `conversation-ride-${ride.id}`,
-            isOnline: true,
-            lastMessage: initialMessage,
-            lastTimestamp: "Maintenant",
-            participantAvatar: ride.driver.avatar,
-            participantName: ride.driver.name,
-            participantRoleLabel: "Conducteur",
-            paymentStateLabel,
-            rideId: ride.id,
-            routeLabel: ride.routeLabel,
-            statusLabel: "Confirmée",
-            unread: false,
-            messages: [
-              {
-                id: `message-${Date.now()}`,
-                sender: "them",
-                text: initialMessage,
-                timestamp: "Maintenant",
-              },
-            ],
-          } satisfies Conversation);
-
-        nextTrip = {
-          departureLabel: `${ride.departureDateLabel}, ${ride.departureTime}`,
-          driverAvatar: ride.driver.avatar,
-          driverName: ride.driver.shortName,
-          id: `booking-${Date.now()}`,
-          kind: "upcoming",
-          passengersLabel: `${nextDraft.seatCount}/${ride.seatsTotal}`,
-          paymentStatus,
-          price: Number((ride.price + ride.serviceFee + ride.taxes).toFixed(2)),
-          rideId: ride.id,
-          routeLabel: ride.routeLabel,
-          status: "confirmed",
-          vehicleName: ride.driver.vehicleName,
-        };
-
-        return {
-          ...current,
-          activeConversationId: nextConversation.id,
-          bookingDraft: nextDraft,
-          conversations: existingConversation
-            ? current.conversations.map((conversation) =>
-                conversation.id === existingConversation.id
-                  ? {
-                      ...conversation,
-                      lastMessage: initialMessage,
-                      lastTimestamp: "Maintenant",
-                      paymentStateLabel,
-                      statusLabel: "Confirmée",
-                      unread: false,
-                    }
-                  : conversation,
-              )
-            : [nextConversation, ...current.conversations],
-          passengerTrips: nextTrip
-            ? [nextTrip, ...current.passengerTrips]
-            : current.passengerTrips,
-        };
-      });
-
-      return nextTrip;
-    };
-
-    const sendMessage = (text: string) => {
-      const nextText = text.trim();
-
-      if (!nextText || !state.activeConversationId) {
-        return;
-      }
-
-      // Also send to Supabase if conversation has a real UUID
-      const convo = state.conversations.find((c) => c.id === state.activeConversationId);
-      const isRealConvo = convo && /^[0-9a-f]{8}-/.test(convo.id);
-      if (isRealConvo && authUser) {
-        supabase
-          .from("messages")
-          .insert({
-            conversation_id: convo.id,
-            sender_id: authUser.id,
-            text: nextText,
-          } as never)
-          .then();
-      }
-
-      setState((current) => ({
+      setUiState((current) => ({
         ...current,
-        conversations: current.conversations.map((conversation) =>
-          conversation.id === current.activeConversationId
-            ? {
-                ...conversation,
-                lastMessage: nextText,
-                lastTimestamp: "Maintenant",
-                messages: [
-                  ...conversation.messages,
-                  {
-                    id: `message-${Date.now()}`,
-                    sender: "me",
-                    text: nextText,
-                    timestamp: "Maintenant",
-                  },
-                ],
-              }
-            : conversation,
-        ),
+        bookingDraft: nextDraft,
       }));
-    };
 
-    const logout = () => {
-      setState((current) => ({
-        ...current,
-        authStatus: "anonymous",
-        authVariant: null,
-        user: null,
-        rides: [],
-        passengerTrips: [],
-        publishedTrips: [],
-        conversations: [],
-        driverAvailabilities: [],
-        rideRequests: [],
-      }));
-    };
+      return {
+        departureLabel: `${ride.departureDateLabel}, ${ride.departureTime}`,
+        driverAvatar: ride.driver.avatar,
+        driverName: ride.driver.shortName,
+        id: `booking-preview-${ride.id}`,
+        kind: "upcoming",
+        passengersLabel: `${nextDraft.seatCount}/${ride.seatsTotal}`,
+        paymentStatus,
+        price: Number((ride.price + ride.serviceFee + ride.taxes).toFixed(2)),
+        rideId: ride.id,
+        routeLabel: ride.routeLabel,
+        status: "confirmed",
+        vehicleName: ride.driver.vehicleName,
+      };
+    },
+    [selectedRide, uiState.bookingDraft],
+  );
 
-    return {
+  const getNextRoute = useCallback(
+    () =>
+      getNextWorkflowRoute({
+        authStatus,
+        profileCompleted,
+        trustCompleted,
+      }),
+    [authStatus, profileCompleted, trustCompleted],
+  );
+
+  const value = useMemo<OpenRideWorkflowContextValue>(
+    () => ({
       activeConversation,
-      availabilityDraft: state.availabilityDraft,
-      bookingDraft: state.bookingDraft,
+      availabilityDraft: uiState.availabilityDraft,
+      bookingDraft: uiState.bookingDraft,
       cancelAvailability,
       cancelRideRequest,
       completeBooking,
-      completeSetupProfile,
-      completeTrustCenter,
-      conversations: state.conversations,
-      createRideRequest,
-      driverAvailabilities: state.driverAvailabilities,
+      conversations,
+      driverAvailabilities,
       getDriverRequestMatches,
-      getNextRoute: () => getNextWorkflowRoute(state),
+      getNextRoute,
       getSearchMatches,
-      isAuthenticated: state.authStatus === "authenticated",
-      login,
-      logout,
-      onboardingStep: state.onboardingStep,
+      myDriverAvailabilities,
+      myRideRequests,
       openConversationForContext,
       openConversationForRide,
-      passengerTrips: state.passengerTrips,
-      profileCompleted: state.profileCompleted,
-      publishAvailability,
-      publishDraft: state.publishDraft,
-      publishMode: state.publishMode,
-      publishTrip,
-      publishedTrips: state.publishedTrips,
-      rideRequestDraft: state.rideRequestDraft,
-      rideRequests: state.rideRequests,
+      passengerTrips,
+      profileCompleted,
+      publishDraft: uiState.publishDraft,
+      publishMode: uiState.publishMode,
+      publishedTrips,
+      rideRequestDraft: uiState.rideRequestDraft,
+      rideRequests,
       saveAvailabilityDraft,
       savePublishDraft,
-      searchMode: state.searchMode,
-      searchRides: state.rides,
+      searchMode: uiState.searchMode,
+      searchRides,
       selectedRide,
       sendMessage,
       setActiveConversation,
       setPublishMode,
       setSearchMode,
       setSelectedRide,
-      signup,
-      trustCompleted: state.trustCompleted,
+      trustCompleted,
       updateBookingDraft,
-      updateProfile,
       updateRideRequestDraft,
-      user: state.user,
-    };
-  }, [state, authUser]);
+      user,
+    }),
+    [
+      activeConversation,
+      cancelAvailability,
+      cancelRideRequest,
+      completeBooking,
+      conversations,
+      driverAvailabilities,
+      getDriverRequestMatches,
+      getNextRoute,
+      getSearchMatches,
+      myDriverAvailabilities,
+      myRideRequests,
+      openConversationForContext,
+      openConversationForRide,
+      passengerTrips,
+      profileCompleted,
+      publishedTrips,
+      rideRequests,
+      saveAvailabilityDraft,
+      savePublishDraft,
+      searchRides,
+      selectedRide,
+      sendMessage,
+      setActiveConversation,
+      setPublishMode,
+      setSearchMode,
+      setSelectedRide,
+      trustCompleted,
+      uiState.availabilityDraft,
+      uiState.bookingDraft,
+      uiState.publishDraft,
+      uiState.publishMode,
+      uiState.rideRequestDraft,
+      uiState.searchMode,
+      updateBookingDraft,
+      updateRideRequestDraft,
+      user,
+    ],
+  );
 
   return (
     <OpenRideWorkflowContext.Provider value={value}>
@@ -1210,8 +1208,6 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
     </OpenRideWorkflowContext.Provider>
   );
 }
-
-const DEFAULT_AVATAR = "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg";
 
 export function useOpenRideWorkflow() {
   const context = useContext(OpenRideWorkflowContext);

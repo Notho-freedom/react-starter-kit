@@ -39,15 +39,15 @@ function PriceBreakdownSidebar({ isProcessing = false }: PriceBreakdownSidebarPr
           <div className="space-y-4 mb-6">
             <div className="flex justify-between text-sm">
               <span className="text-brand-textMuted">Prix par place ({seatCount}x)</span>
-              <span className="text-white font-medium">€{subtotal.toFixed(2)}</span>
+              <span className="text-white font-medium">CA${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-brand-textMuted">Frais de service RideShare</span>
-              <span className="text-white font-medium">€{ride.serviceFee.toFixed(2)}</span>
+              <span className="text-white font-medium">CA${ride.serviceFee.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-brand-textMuted">Taxes (TVA)</span>
-              <span className="text-white font-medium">€{ride.taxes.toFixed(2)}</span>
+              <span className="text-brand-textMuted">Taxes</span>
+              <span className="text-white font-medium">CA${ride.taxes.toFixed(2)}</span>
             </div>
           </div>
 
@@ -63,9 +63,9 @@ function PriceBreakdownSidebar({ isProcessing = false }: PriceBreakdownSidebarPr
           <div className="pt-6 border-t border-gray-700 mb-8">
             <div className="flex justify-between items-end mb-2">
               <span className="text-white font-bold text-lg">Total à payer</span>
-              <span className="text-3xl font-bold text-brand-accentGreen">€{total.toFixed(2)}</span>
+              <span className="text-3xl font-bold text-brand-accentGreen">CA${total.toFixed(2)}</span>
             </div>
-            <p className="text-xs text-brand-textMuted text-right">En EUR, taxes incluses</p>
+            <p className="text-xs text-brand-textMuted text-right">En CAD, taxes incluses</p>
           </div>
 
           <label className="flex items-start gap-3 mb-6 cursor-pointer">

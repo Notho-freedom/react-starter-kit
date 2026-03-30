@@ -72,13 +72,21 @@ function MyTripsContent() {
       return workflow.publishedTrips.filter((t) => t.kind === tab);
     }
     if (selectedCategory === "requests") {
-      return workflow.rideRequests.filter((r) => r.kind === tab);
+      return workflow.myRideRequests.filter((r) => r.kind === tab);
     }
     if (selectedCategory === "availabilities") {
-      return workflow.driverAvailabilities.filter((a) => a.kind === tab);
+      return workflow.myDriverAvailabilities.filter((a) => a.kind === tab);
     }
     return [];
-  }, [selectedCategory, tab, workflow.passengerTrips, workflow.publishedTrips, workflow.rideRequests, workflow.driverAvailabilities]);
+  }, [
+    selectedCategory,
+    tab,
+    workflow.driverAvailabilities,
+    workflow.myDriverAvailabilities,
+    workflow.myRideRequests,
+    workflow.passengerTrips,
+    workflow.publishedTrips,
+  ]);
 
   const counts = useMemo(() => {
     const source =
@@ -87,15 +95,22 @@ function MyTripsContent() {
         : selectedCategory === "trips"
           ? workflow.publishedTrips
           : selectedCategory === "requests"
-            ? workflow.rideRequests
-            : workflow.driverAvailabilities;
+            ? workflow.myRideRequests
+            : workflow.myDriverAvailabilities;
 
     const result: Partial<Record<MyTripsStatusTab, number>> = {};
     for (const option of tabOptions) {
       result[option.value] = source.filter((item) => item.kind === option.value).length;
     }
     return result;
-  }, [selectedCategory, tabOptions, workflow.passengerTrips, workflow.publishedTrips, workflow.rideRequests, workflow.driverAvailabilities]);
+  }, [
+    selectedCategory,
+    tabOptions,
+    workflow.myDriverAvailabilities,
+    workflow.myRideRequests,
+    workflow.passengerTrips,
+    workflow.publishedTrips,
+  ]);
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? items[0] ?? null;
 
@@ -130,8 +145,8 @@ function MyTripsContent() {
             items={items as Array<PassengerTrip | PublishedTrip | RiderRequestPost | DriverAvailabilityPost>}
             onCancelAvailability={(id) => workflow.cancelAvailability(id)}
             onCancelRequest={(id) => workflow.cancelRideRequest(id)}
-            onMessage={(rideId) => {
-              workflow.openConversationForRide(rideId);
+            onMessage={async (rideId) => {
+              await workflow.openConversationForRide(rideId);
               navigate("/messages");
             }}
             onOpenDetails={(rideId) => {
@@ -142,8 +157,8 @@ function MyTripsContent() {
             selectedItemId={selectedItemId}
           />
           <TripsSummaryPanel
-            onMessage={(rideId) => {
-              workflow.openConversationForRide(rideId);
+            onMessage={async (rideId) => {
+              await workflow.openConversationForRide(rideId);
               navigate("/messages");
             }}
             ride={selectedRide}

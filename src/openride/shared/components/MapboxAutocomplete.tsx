@@ -29,8 +29,8 @@ function useUserLocation() {
         setCoords({ lng: pos.coords.longitude, lat: pos.coords.latitude });
       },
       () => {
-        // Fallback: Paris center
-        setCoords({ lng: 2.3522, lat: 48.8566 });
+        // Fallback: Montreal center
+        setCoords({ lng: -73.5673, lat: 45.5017 });
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 300000 },
     );

@@ -60,7 +60,7 @@ function TripsList({
                       {(item as PassengerTrip).status === "confirmed" ? "Confirmé" : "En attente"}
                     </span>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {(item as PassengerTrip).price.toFixed(2)} €
+                      CA${(item as PassengerTrip).price.toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -147,7 +147,7 @@ function TripsList({
                       {(item as PublishedTrip).status === "published" ? "Publié" : "Brouillon"}
                     </span>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {(item as PublishedTrip).price.toFixed(2)} €
+                      CA${(item as PublishedTrip).price.toFixed(2)}
                     </p>
                   </div>
                 </div>

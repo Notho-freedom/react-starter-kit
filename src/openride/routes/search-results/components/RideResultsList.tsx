@@ -188,8 +188,8 @@ function RideResultsList() {
               <button
                 className="rounded-lg bg-brand-accentGreen px-4 py-2 text-sm font-medium text-brand-dark transition-colors hover:bg-[#8be08b]"
                 type="button"
-                onClick={() => {
-                  workflow.openConversationForContext({
+                onClick={async () => {
+                  await workflow.openConversationForContext({
                     contextId: availability.id,
                     contextType: "availability",
                     counterpartAvatar: availability.driverAvatar,

@@ -55,8 +55,8 @@ const SetupProfileFormPanel = () => (
             <label className="text-sm font-medium text-gray-700">Phone Number</label>
             <div className="relative input-field rounded-xl flex">
               <select name="phoneCountryCode" className="bg-gray-50 border-r border-gray-200 px-3 py-3 rounded-l-xl text-gray-700 focus:outline-none">
+                <option>+1 (CA)</option>
                 <option>+1 (US)</option>
-                <option>+44 (UK)</option>
                 <option>+33 (FR)</option>
               </select>
               <input name="phone" type="tel" placeholder="(555) 000-0000" className="flex-1 px-4 py-3 rounded-r-xl focus:outline-none text-gray-900 bg-transparent placeholder-gray-400" required />
@@ -72,8 +72,8 @@ const SetupProfileFormPanel = () => (
               <label className="text-sm font-medium text-gray-700">Preferred Language</label>
               <div className="relative input-field rounded-xl">
                 <select name="language" className="w-full px-4 py-3 rounded-xl focus:outline-none text-gray-900 bg-transparent appearance-none">
+                  <option>Français</option>
                   <option>English</option>
-                  <option>French</option>
                   <option>Spanish</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
@@ -85,9 +85,9 @@ const SetupProfileFormPanel = () => (
               <label className="text-sm font-medium text-gray-700">Currency</label>
               <div className="relative input-field rounded-xl">
                 <select name="currency" className="w-full px-4 py-3 rounded-xl focus:outline-none text-gray-900 bg-transparent appearance-none">
+                  <option>CAD ($)</option>
                   <option>USD ($)</option>
                   <option>EUR (€)</option>
-                  <option>GBP (£)</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                   <OpenRideIcon name="chevron-down" className="text-gray-400 text-xs" />

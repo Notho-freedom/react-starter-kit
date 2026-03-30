@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { DashboardShell, OpenRidePageFrame } from "@/openride/shared/layouts";
 import { handleOpenRideRouteClick, preventDefaultSubmit } from "@/openride/shared/navigation";
 import { type PaymentMethodId, useOpenRideWorkflow } from "@/openride/shared/workflows";
-import { useCreateBooking, useCreateConversation } from "@/integrations/supabase/hooks";
+import { useCreateBooking } from "@/integrations/supabase/hooks";
 import { PaymentBookingContent, PaymentBookingHeader } from "./components";
 import BookingSuccessModal from "./components/BookingSuccessModal";
 
@@ -13,10 +13,12 @@ const PaymentBookingPage = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number>();
   const [paymentMethod, setPaymentMethod] = useState(0);
+  const [completedPaymentMethod, setCompletedPaymentMethod] = useState<PaymentMethodId | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const workflow = useOpenRideWorkflow();
   const createBookingMutation = useCreateBooking();
+  const activeRide = workflow.selectedRide ?? workflow.searchRides[0];
 
   useEffect(() => {
     return () => {
@@ -60,9 +62,11 @@ const PaymentBookingPage = () => {
         if (bookingAction === "message") {
           event.preventDefault();
           if (workflow.selectedRide) {
-            workflow.openConversationForRide(workflow.selectedRide.id);
+            void workflow.openConversationForRide(workflow.selectedRide.id).then(() => {
+              navigate("/messages");
+            });
+            return;
           }
-          navigate("/messages");
           return;
         }
 
@@ -128,10 +132,8 @@ const PaymentBookingPage = () => {
           const chosenMethod = selectedPayment ?? paymentValues[paymentMethod] ?? "card";
 
           // Call Supabase booking creation if we have a real ride ID (UUID format)
-          const rideId = workflow.bookingDraft.rideId ?? workflow.selectedRide?.id;
-          const isRealId = rideId && /^[0-9a-f]{8}-/.test(rideId);
-
-          if (isRealId) {
+          const rideId = workflow.bookingDraft.rideId ?? activeRide?.id;
+          if (rideId) {
             createBookingMutation.mutate(
               {
                 ride_id: rideId,
@@ -141,7 +143,6 @@ const PaymentBookingPage = () => {
               },
               {
                 onSuccess: () => {
-                  // Also update local workflow for UI
                   workflow.completeBooking({
                     email: readFieldValue("email").trim() || workflow.user?.email || "",
                     firstName: readFieldValue("firstName").trim() || workflow.user?.firstName || "",
@@ -150,6 +151,7 @@ const PaymentBookingPage = () => {
                     paymentMethod: chosenMethod,
                     seatCount: workflow.bookingDraft.seatCount,
                   });
+                  setCompletedPaymentMethod(chosenMethod);
                   setIsProcessing(false);
                   setShowSuccess(true);
                   toast.success("Réservation confirmée !");
@@ -170,6 +172,7 @@ const PaymentBookingPage = () => {
               paymentMethod: chosenMethod,
               seatCount: workflow.bookingDraft.seatCount,
             });
+            setCompletedPaymentMethod(chosenMethod);
             setIsProcessing(false);
             setShowSuccess(true);
           }
@@ -183,7 +186,10 @@ const PaymentBookingPage = () => {
         <main ref={rootRef} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <PaymentBookingHeader />
           <PaymentBookingContent isProcessing={isProcessing} />
-          <BookingSuccessModal isOpen={showSuccess} />
+          <BookingSuccessModal
+            isOpen={showSuccess}
+            paymentMethod={completedPaymentMethod ?? workflow.bookingDraft.paymentMethod}
+          />
         </main>
       </DashboardShell>
     </OpenRidePageFrame>

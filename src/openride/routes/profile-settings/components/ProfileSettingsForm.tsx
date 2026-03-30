@@ -53,7 +53,7 @@ function ProfileSettingsForm() {
               <label className="text-sm font-medium text-gray-300">Numéro de téléphone</label>
               <div className="relative flex">
                 <div className="flex items-center justify-center px-4 bg-brand-surface border border-white/10 border-r-0 rounded-l-xl text-sm text-gray-300">
-                  +33
+                  +1
                 </div>
                 <input name="phone" type="tel" defaultValue={phone} className="flex-1 input-field rounded-r-xl rounded-l-none px-4 py-3 text-sm focus:ring-2 focus:ring-brand-accentPurple/50" />
                 {(profile?.phone_verified as boolean) ? (

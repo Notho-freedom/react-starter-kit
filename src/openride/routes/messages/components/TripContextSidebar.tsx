@@ -13,8 +13,12 @@ function TripContextSidebar() {
 
   const contextType = conversation.contextType;
   const ride = workflow.searchRides.find((entry) => entry.id === conversation.rideId) ?? workflow.selectedRide;
-  const availability = workflow.driverAvailabilities.find((a) => a.id === conversation.rideId);
-  const request = workflow.rideRequests.find((r) => r.id === conversation.rideId);
+  const availability =
+    workflow.myDriverAvailabilities.find((entry) => entry.id === conversation.rideId) ??
+    workflow.driverAvailabilities.find((entry) => entry.id === conversation.rideId);
+  const request =
+    workflow.myRideRequests.find((entry) => entry.id === conversation.rideId) ??
+    workflow.rideRequests.find((entry) => entry.id === conversation.rideId);
 
   return (
     <div id="context-sidebar" className="hidden lg:flex w-80 flex-col border-l border-gray-800/50 bg-brand-background shrink-0 overflow-y-auto hide-scroll">

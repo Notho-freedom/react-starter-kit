@@ -74,7 +74,7 @@ const PublishTripSidebar = () => {
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-brand-accentGreen">
-                      {tripDraft.price}€
+                      CA${tripDraft.price}
                     </span>
                   </div>
                 </div>
@@ -133,8 +133,8 @@ const PublishTripSidebar = () => {
                     <button
                       className="rounded-lg bg-brand-purple px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-purpleLight"
                       type="button"
-                      onClick={() => {
-                        workflow.openConversationForContext({
+                      onClick={async () => {
+                        await workflow.openConversationForContext({
                           contextId: match.contextId,
                           contextType: match.contextType,
                           counterpartAvatar: match.counterpartAvatar,

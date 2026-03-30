@@ -108,8 +108,8 @@ function TripDetailsMainColumn() {
           </div>
           <button
             className="w-full md:w-auto px-6 py-3 rounded-xl bg-brand-surface text-white font-medium border border-gray-700 hover:border-brand-accentGreen transition-colors flex items-center justify-center gap-2"
-            onClick={() => {
-              workflow.openConversationForRide(ride.id);
+            onClick={async () => {
+              await workflow.openConversationForRide(ride.id);
               navigate("/messages");
             }}
             type="button"

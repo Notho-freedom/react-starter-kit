@@ -92,16 +92,6 @@ const PublishTripPage = () => {
           publishAvailabilityMutation.mutate(payload, {
             onSuccess: () => {
               toast.success("Disponibilité publiée !");
-              // Also update local workflow for immediate UI feedback
-              workflow.publishAvailability({
-                zone: payload.zone,
-                date: payload.date,
-                startTime: payload.start_time,
-                endTime: payload.end_time,
-                seats: payload.seats,
-                vehicleName: payload.vehicle_name,
-                notes: payload.notes,
-              });
               navigate("/my-trips");
             },
             onError: (err) => toast.error(err.message || "Erreur lors de la publication"),
@@ -145,19 +135,6 @@ const PublishTripPage = () => {
         publishTripMutation.mutate(tripPayload, {
           onSuccess: () => {
             toast.success("Trajet publié !");
-            workflow.publishTrip({
-              departure: tripPayload.departure,
-              destination: tripPayload.destination,
-              date: tripPayload.date,
-              time: tripPayload.time,
-              price: tripPayload.price,
-              seats: tripPayload.seats_total,
-              vehicleName: tripPayload.vehicle_name || "",
-              luggageAllowed: tripPayload.luggage_allowed,
-              petsAllowed: tripPayload.pets_allowed,
-              smokingAllowed: tripPayload.smoking_allowed,
-              instructions: tripPayload.instructions,
-            });
             navigate("/my-trips");
           },
           onError: (err) => toast.error(err.message || "Erreur lors de la publication"),

@@ -61,15 +61,15 @@ function TripDetailsBookingSidebar() {
           <div className="space-y-3 mb-8">
             <div className="flex justify-between text-sm">
               <span className="text-brand-textMuted">{seatCount} Place{seatCount > 1 ? "s" : ""}</span>
-              <span className="text-white font-medium">€{subtotal.toFixed(2)}</span>
+              <span className="text-white font-medium">CA${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-brand-textMuted">Frais de service</span>
-              <span className="text-white font-medium">€{ride.serviceFee.toFixed(2)}</span>
+              <span className="text-white font-medium">CA${ride.serviceFee.toFixed(2)}</span>
             </div>
             <div className="pt-3 border-t border-gray-700 flex justify-between text-base font-bold">
               <span className="text-white">Total</span>
-              <span className="text-brand-accentGreen">€{total.toFixed(2)}</span>
+              <span className="text-brand-accentGreen">CA${total.toFixed(2)}</span>
             </div>
           </div>
 
