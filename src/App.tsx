@@ -4,9 +4,15 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/openride/shared/auth";
+import { usePushNotifications } from "@/openride/shared/notifications";
 import AppRoutes from "./AppRoutes";
 
 const queryClient = new QueryClient();
+
+function PushNotificationInit() {
+  usePushNotifications();
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -14,6 +20,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PushNotificationInit />
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>

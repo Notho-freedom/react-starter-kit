@@ -14,6 +14,17 @@ import {
   formatTimeWindow,
   openRideWorkflowStorageKey,
 } from "./seed";
+import {
+  dbProfileToUserProfile,
+  dbTripToRide,
+  dbBookingToPassengerTrip,
+  dbTripToPublishedTrip,
+  dbAvailabilityToPost,
+  dbRequestToPost,
+  dbConversationToConversation,
+} from "./supabaseMappers";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/openride/shared/auth";
 import type {
   AuthVariant,
   BookingDraft,
@@ -355,10 +366,175 @@ type OpenRideWorkflowProviderProps = {
 
 export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderProps) {
   const [state, setState] = useState<OpenRideWorkflowState>(getInitialWorkflowState);
+  const { user: authUser } = useAuth();
 
+  // Persist to localStorage
   useEffect(() => {
     window.localStorage.setItem(openRideWorkflowStorageKey, JSON.stringify(state));
   }, [state]);
+
+  // ═══════════════════════════════════════════════
+  // SUPABASE HYDRATION: Load real data on auth change
+  // ═══════════════════════════════════════════════
+  useEffect(() => {
+    if (!authUser) {
+      setState((current) => ({
+        ...current,
+        authStatus: "anonymous",
+        user: null,
+        rides: [],
+        passengerTrips: [],
+        publishedTrips: [],
+        driverAvailabilities: [],
+        rideRequests: [],
+        conversations: [],
+      }));
+      return;
+    }
+
+    // Set authenticated immediately
+    setState((current) => ({
+      ...current,
+      authStatus: "authenticated",
+    }));
+
+    const hydrate = async () => {
+      try {
+        const userId = authUser.id;
+
+        // Fetch all data in parallel
+        const [
+          profileRes,
+          allTripsRes,
+          myTripsRes,
+          bookingsRes,
+          allAvailRes,
+          allRequestsRes,
+          myRequestsRes,
+        ] = await Promise.all([
+          supabase.from("profiles").select("*").eq("id", userId).single(),
+          supabase
+            .from("trips")
+            .select("*, driver:profiles(*)")
+            .eq("status", "published")
+            .order("date", { ascending: true }),
+          supabase
+            .from("trips")
+            .select("*")
+            .eq("driver_id", userId)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("bookings")
+            .select("*, trip:trips(*, driver:profiles(*))")
+            .eq("passenger_id", userId)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("driver_availabilities")
+            .select("*, driver:profiles(*)")
+            .eq("status", "active")
+            .order("date", { ascending: true }),
+          supabase
+            .from("ride_requests")
+            .select("*, passenger:profiles(*)")
+            .eq("status", "active")
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("ride_requests")
+            .select("*, passenger:profiles(*)")
+            .eq("passenger_id", userId)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        // Fetch conversations
+        const { data: participations } = await supabase
+          .from("conversation_participants")
+          .select("conversation_id")
+          .eq("user_id", userId);
+
+        const convoIds = (participations ?? []).map((p) => p.conversation_id as string);
+        let conversations: Conversation[] = [];
+
+        if (convoIds.length > 0) {
+          const { data: convosData } = await supabase
+            .from("conversations")
+            .select("*, participants:conversation_participants(*, profile:profiles(*))")
+            .in("id", convoIds)
+            .order("created_at", { ascending: false });
+
+          if (convosData) {
+            conversations = await Promise.all(
+              convosData.map(async (convo) => {
+                const { data: msgs } = await supabase
+                  .from("messages")
+                  .select("*")
+                  .eq("conversation_id", convo.id as string)
+                  .order("created_at", { ascending: true });
+                return dbConversationToConversation(
+                  convo as Record<string, unknown>,
+                  (msgs ?? []) as Record<string, unknown>[],
+                  userId,
+                );
+              }),
+            );
+          }
+        }
+
+        // Map data
+        const profile = profileRes.data as Record<string, unknown> | null;
+        const userProfile = profile ? dbProfileToUserProfile(profile) : null;
+        const profileCompleted = !!(profile?.first_name);
+
+        const allRides = (allTripsRes.data ?? []).map((t) =>
+          dbTripToRide(t as Record<string, unknown>),
+        );
+
+        const passengerTrips = (bookingsRes.data ?? []).map((b) =>
+          dbBookingToPassengerTrip(b as Record<string, unknown>),
+        );
+
+        const publishedTrips = (myTripsRes.data ?? []).map((t) =>
+          dbTripToPublishedTrip(t as Record<string, unknown>),
+        );
+
+        const driverAvailabilities = (allAvailRes.data ?? []).map((a) =>
+          dbAvailabilityToPost(a as Record<string, unknown>),
+        );
+
+        const rideRequests = (allRequestsRes.data ?? []).map((r) =>
+          dbRequestToPost(r as Record<string, unknown>),
+        );
+
+        setState((current) => ({
+          ...current,
+          authStatus: "authenticated",
+          user: userProfile ?? current.user,
+          profileCompleted,
+          trustCompleted: profileCompleted, // Trust considered done if profile is set up
+          onboardingStep: profileCompleted ? "complete" : "setup-profile",
+          rides: allRides,
+          passengerTrips,
+          publishedTrips,
+          driverAvailabilities,
+          rideRequests,
+          conversations,
+          selectedRideId: allRides[0]?.id ?? current.selectedRideId,
+          activeConversationId: conversations[0]?.id ?? current.activeConversationId,
+          bookingDraft: {
+            ...current.bookingDraft,
+            email: userProfile?.email ?? current.bookingDraft.email,
+            firstName: userProfile?.firstName ?? current.bookingDraft.firstName,
+            lastName: userProfile?.lastName ?? current.bookingDraft.lastName,
+            phone: userProfile?.phone ?? current.bookingDraft.phone,
+            rideId: allRides[0]?.id ?? current.bookingDraft.rideId,
+          },
+        }));
+      } catch (error) {
+        console.error("Supabase hydration error:", error);
+      }
+    };
+
+    hydrate();
+  }, [authUser?.id]);
 
   const value = useMemo<OpenRideWorkflowContextValue>(() => {
     const selectedRide =
@@ -570,8 +746,8 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
 
     const publishAvailability = (payload: Partial<DriverAvailabilityDraft>) => {
       let publishedAvailability: DriverAvailabilityPost = {
-        date: state.availabilityDraft.date || "2026-03-30",
-        driverAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg",
+        date: state.availabilityDraft.date || new Date().toISOString().split("T")[0],
+        driverAvatar: DEFAULT_AVATAR,
         driverName: state.user?.fullName || "Conducteur OpenRide",
         driverRating: state.user?.rating ?? 4.8,
         id: `availability-${Date.now()}`,
@@ -594,9 +770,8 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
         };
 
         publishedAvailability = {
-          date: nextDraft.date || "2026-03-30",
-          driverAvatar:
-            "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg",
+          date: nextDraft.date || new Date().toISOString().split("T")[0],
+          driverAvatar: DEFAULT_AVATAR,
           driverName: current.user?.fullName || "Conducteur OpenRide",
           driverRating: current.user?.rating ?? 4.8,
           id: `availability-${Date.now()}`,
@@ -621,13 +796,13 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
 
     const createRideRequest = (payload: Partial<RiderRequestDraft>) => {
       let requestPost: RiderRequestPost = {
-        date: state.rideRequestDraft.date || "2026-03-30",
+        date: state.rideRequestDraft.date || new Date().toISOString().split("T")[0],
         destination: state.rideRequestDraft.destination,
         id: `request-${Date.now()}`,
         kind: "active",
         notes: state.rideRequestDraft.notes,
         origin: state.rideRequestDraft.origin,
-        passengerAvatar: "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg",
+        passengerAvatar: DEFAULT_AVATAR,
         passengerName: state.user?.fullName || "Passager OpenRide",
         routeLabel: buildRequestRouteLabel(
           state.rideRequestDraft.origin,
@@ -647,14 +822,13 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
         };
 
         requestPost = {
-          date: nextDraft.date || "2026-03-30",
+          date: nextDraft.date || new Date().toISOString().split("T")[0],
           destination: nextDraft.destination,
           id: `request-${Date.now()}`,
           kind: "active",
           notes: nextDraft.notes,
           origin: nextDraft.origin,
-          passengerAvatar:
-            "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg",
+          passengerAvatar: DEFAULT_AVATAR,
           passengerName: current.user?.fullName || "Passager OpenRide",
           routeLabel: buildRequestRouteLabel(nextDraft.origin, nextDraft.destination),
           seatCount: nextDraft.seatCount,
@@ -929,6 +1103,20 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
         return;
       }
 
+      // Also send to Supabase if conversation has a real UUID
+      const convo = state.conversations.find((c) => c.id === state.activeConversationId);
+      const isRealConvo = convo && /^[0-9a-f]{8}-/.test(convo.id);
+      if (isRealConvo && authUser) {
+        supabase
+          .from("messages")
+          .insert({
+            conversation_id: convo.id,
+            sender_id: authUser.id,
+            text: nextText,
+          } as never)
+          .then();
+      }
+
       setState((current) => ({
         ...current,
         conversations: current.conversations.map((conversation) =>
@@ -957,6 +1145,13 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
         ...current,
         authStatus: "anonymous",
         authVariant: null,
+        user: null,
+        rides: [],
+        passengerTrips: [],
+        publishedTrips: [],
+        conversations: [],
+        driverAvailabilities: [],
+        rideRequests: [],
       }));
     };
 
@@ -1007,7 +1202,7 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
       updateRideRequestDraft,
       user: state.user,
     };
-  }, [state]);
+  }, [state, authUser]);
 
   return (
     <OpenRideWorkflowContext.Provider value={value}>
@@ -1015,6 +1210,8 @@ export function OpenRideWorkflowProvider({ children }: OpenRideWorkflowProviderP
     </OpenRideWorkflowContext.Provider>
   );
 }
+
+const DEFAULT_AVATAR = "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg";
 
 export function useOpenRideWorkflow() {
   const context = useContext(OpenRideWorkflowContext);
