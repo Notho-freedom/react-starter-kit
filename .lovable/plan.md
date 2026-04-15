@@ -1,148 +1,184 @@
+# Objectif
 
+Reprendre proprement toute l’intégration Windows/Desktop qui est actuellement cassée, puis faire évoluer l’app Electron d’un simple HUD de widgets vers un vrai “bureau immersif” inspiré de la vue web actuelle et du mode Big Picture de Steam.
 
-# OpenRide — Backend intégral avec Supabase
+## Ce que j’ai identifié dans le code
 
-## Résumé
+### 1) Le mode desktop actuel est incohérent
 
-Migrer toute l'application d'un prototype localStorage vers un backend Supabase complet : authentification réelle, base de données, messagerie temps réel, et autocomplétion Mapbox. Aucun bouton ne reste sans backend.
+- `useElectronMode.ts` force `html.electron-mode body { background: transparent }`
+- `Index.tsx` bascule directement vers `DesktopWidgetShell`
+- `DesktopWidgetShell` affiche surtout des overlays flottants, pas un bureau structuré
+- `BridgeIndicator` est encore positionné en bas-droite alors que ton intention précédente était top-left
+- `electron/main.js` crée bien une fenêtre transparente, mais `alwaysOnTop` est à `false` alors que toute l’archi widgets repose sur une logique overlay/click-through
+- le résultat mélange “overlay transparent”, “pseudo desktop”, “fenêtre d’explorateur”, “shell Windows override”, donc rien n’est vraiment stabilisé
 
-## Prérequis
+### 2) Le fond du mode web n’est pas réellement repris
 
-Tu dois connecter ton projet Supabase externe via les paramètres Lovable **avant** l'implémentation. Je te guiderai à cette étape.
+Le web a une ambiance de fond claire dans `Index.tsx` + `index.css`, mais en Electron on annule ce fond au lieu de le réutiliser.  
+Donc le desktop Electron ne ressemble pas à la version web.
 
----
+### 3) L’intégration Windows actuelle est trop agressive
 
-## Phase 1 — Connexion Supabase + Auth
+Le code de `electron/main.js` essaie déjà de rediriger l’explorateur Windows via registre + hooks shell. Vu ton message “rien ne marche”, il faut repartir sur une intégration fiabilisée :
 
-**Connecter Supabase** : installer `@supabase/supabase-js`, créer `src/integrations/supabase/client.ts` avec tes credentials (VITE_SUPABASE_URL + VITE_SUPABASE_PUBLISHABLE_KEY).
+- d’abord stabiliser le bureau et le bridge Electron
+- ensuite réactiver les intégrations shell seulement si elles sont robustes
+- éviter qu’un échec shell casse le desktop entier
 
-**Tables de base** (migrations) :
+### 4) Les erreurs de build actuelles viennent surtout de `useFileExplorer.ts`
+
+Le hook suppose que `getDrives/getNetworkMounts/getListeningServices` retournent toujours un payload enrichi, mais `useSystemBridge.ts` peut renvoyer un fallback simplifié :
+
+- `status` devient un `string`
+- `source`, `lastUpdatedAt`, `error` n’existent pas toujours
+=> c’est la cause directe des erreurs TS2322 / TS2339
+
+### 5) Il faut aussi vérifier les fonctions backend
+
+Les erreurs signalées sur :
+
+- `supabase/functions/chat/ENHANCED_SYSTEM_PROMPT.ts`
+- `supabase/functions/chat/index.ts`
+- `supabase/functions/system-actions/index.ts`
+demandent une passe de correction dédiée pour assurer que le build/lint redevienne propre.
+
+## Direction de refonte
+
+## Phase A — Stabiliser l’intégration Electron/Desktop
+
+1. Revoir `electron/main.js`
+  - remettre une configuration de fenêtre cohérente pour un vrai mode desktop
+  - décider clairement entre :
+    - mode bureau plein écran non traditionnel
+    - ou mode widgets overlay
+  - conserver le frameless + transparence seulement là où c’est utile
+  - fiabiliser `setIgnoreMouseEvents` pour qu’il ne bloque pas l’interaction
+2. Revoir `useElectronMode.ts`
+  - ne plus rendre tout le body transparent par défaut
+  - séparer :
+    - `electron-desktop-mode`
+    - `electron-widget-overlay-mode`
+  - permettre au mode desktop de garder un vrai fond visuel
+3. Revoir `Index.tsx`
+  - faire du mode Electron un “desktop shell” complet
+  - garder le fond visuel du web comme base du bureau Electron
+  - injecter les widgets/apps par-dessus dans une composition propre
+
+## Phase B — Transformer le HUD en vrai bureau type Big Picture
+
+Créer une structure desktop plus lisible et immersive :
+
 ```text
-profiles (id uuid PK → auth.users, first_name, last_name, email, phone, 
-  bio, city, country, gender, birth_date, avatar_url, currency, language,
-  emergency_contact_name, emergency_contact_phone, 
-  email_verified, phone_verified, id_verified, created_at)
-
-user_roles (id uuid PK, user_id → auth.users, role app_role enum)
+DesktopShell
+├── DesktopBackgroundLayer     ← reprend exactement l’ambiance visuelle web
+├── DesktopTopBar / status rail
+├── DesktopDock / launcher
+├── DesktopCommandBar          ← centre bas
+├── DesktopWorkspace           ← zone principale
+├── DesktopWidgetsLayer        ← cartes flottantes / bridge / status
+└── DesktopWindowsLayer        ← explorateur, apps, panneaux
 ```
 
-**Auth flow** : remplacer le `login()`/`signup()` du workflow par `supabase.auth.signInWithPassword()` et `supabase.auth.signUp()`. Garder les boutons Google/Facebook/Apple comme OAuth providers Supabase. Ajouter un `AuthProvider` React qui écoute `onAuthStateChange` et expose `user`, `session`, `loading`.
+### UX visée
 
-**Gardes de route** : adapter `guards.tsx` pour vérifier la session Supabase au lieu de `state.authStatus`.
+- fond identique à la vue web actuelle, mais étendu à un vrai bureau
+- composition plus “salon / interface immersive” à la Steam Big Picture
+- éléments grands, lisibles, espacés, non “chat”
+- bureau principal avant les widgets
+- widgets comme modules contextuels, pas comme structure principale
 
-**Setup profile + Trust center** : les pages onboarding écrivent dans `profiles` via `upsert`. Le flag `profileCompleted` / `trustCompleted` est dérivé des champs remplis dans `profiles`.
+## Phase C — Corriger toute l’intégration Windows actuelle
 
----
+1. Assainir la logique shell/explorer dans `electron/main.js`
+  - rendre la redirection shell optionnelle et résiliente
+  - éviter que l’échec du registre ou du shell casse l’app
+  - isoler les fonctions d’intégration Windows dans un bloc plus sûr
+2. Vérifier `preload.js` + `useSystemBridge.ts`
+  - aligner exactement les méthodes exposées
+  - normaliser tous les retours du bridge
+  - garantir des payloads typés stables côté React
+3. Harmoniser `DesktopIconZone`, `FileExplorer`, `WindowFrame`
+  - les intégrer dans une logique “apps du bureau”
+  - éviter l’effet collage de composants indépendants
 
-## Phase 2 — Trajets, disponibilités, demandes
+## Phase D — Corriger le build TypeScript
 
-**Tables** :
-```text
-trips (id uuid PK, driver_id → auth.users, departure, destination,
-  departure_station, arrival_station, date, time, price, seats_total,
-  seats_left, vehicle_name, vehicle_color, luggage_allowed, pets_allowed,
-  smoking_allowed, instructions, status enum(draft/published/cancelled),
-  created_at)
+### D1) `useSystemBridge.ts`
 
-driver_availabilities (id uuid PK, driver_id → auth.users, zone, date,
-  start_time, end_time, seats, vehicle_name, notes,
-  status enum(active/fulfilled/cancelled), created_at)
+Uniformiser les fallbacks de :
 
-ride_requests (id uuid PK, passenger_id → auth.users, origin, destination,
-  date, start_time, end_time, seat_count, notes,
-  status enum(active/fulfilled/cancelled), created_at)
+- `getDrives`
+- `getNetworkMounts`
+- `getListeningServices`
 
-bookings (id uuid PK, ride_id → trips, passenger_id → auth.users,
-  seat_count, payment_method, payment_status enum(paid/authorized/cash_pending),
-  status enum(confirmed/pending/cancelled), message, created_at)
-```
+Ils devront retourner un objet strictement compatible avec `CacheBackedPayload<T>` :
 
-**RLS** : chaque table a des policies — les users ne voient/modifient que leurs propres données pour les écritures, lecture publique pour les trajets/disponibilités publiés.
+- `success`
+- `data`
+- `status`
+- `source`
+- `lastUpdatedAt`
+- `error`
 
-**Publish trip** : le formulaire existant (`PublishTripFormSections`) fait un `insert` dans `trips` ou `driver_availabilities` selon le mode.
+### D2) `useFileExplorer.ts`
 
-**Ride request** : le `RideRequestComposer` fait un `insert` dans `ride_requests`.
+- typer explicitement les snapshots enrichis
+- éviter l’accès direct à des propriétés qui n’existent pas sur les fallbacks actuels
+- s’assurer que `ExplorerLoadStatus` reçoit uniquement les valeurs prévues
 
-**My trips** : remplacer les données seed par des queries Supabase avec filtres par role (passager → bookings, demandes ; chauffeur → trips, disponibilités).
+## Phase E — Corriger les erreurs dans les fonctions backend
 
-**Search results** : query `trips` + `driver_availabilities` avec filtres texte/date. Le matching local existant reste côté client pour la sidebar des suggestions.
+Faire une passe dédiée sur :
 
----
+- `supabase/functions/chat/index.ts`
+- `supabase/functions/chat/ENHANCED_SYSTEM_PROMPT.ts`
+- `supabase/functions/system-actions/index.ts`
 
-## Phase 3 — Mapbox côté client
+Objectif :
 
-**Installer** `mapbox-gl` + `@mapbox/mapbox-gl-geocoder` comme dépendances.
+- corriger les éventuels problèmes de typage/lint/format
+- s’assurer que rien dans ces fonctions ne bloque le build global
 
-**Autocomplétion d'adresses** : créer un composant `MapboxAutocomplete` réutilisable qui appelle l'API Mapbox Search directement avec le token du `.env` (`VITE_MAPBOX_ACCESS_TOKEN`). L'intégrer dans :
-- Publish trip : champs départ/arrivée/zone
-- Search results : champs de recherche + demande passager
-- Setup profile : champ ville
+## Fichiers impactés
 
-**Carte interactive** : remplacer l'image statique dans `MapPanel` par une vraie carte Mapbox GL avec des marqueurs pour chaque trajet. Geocoder les villes de départ/arrivée pour positionner les marqueurs.
+- `electron/main.js`
+- `electron/preload.js`
+- `src/hooks/useElectronMode.ts`
+- `src/pages/Index.tsx`
+- `src/components/desktop/DesktopWidgetShell.tsx`
+- `src/components/desktop/BridgeIndicator.tsx`
+- `src/components/desktop/DesktopCommandBar.tsx`
+- `src/components/desktop/DesktopSidePanel.tsx`
+- `src/components/desktop/DesktopIconZone.tsx`
+- `src/components/desktop/WindowFrame.tsx`
+- `src/hooks/useSystemBridge.ts`
+- `src/hooks/useFileExplorer.ts`
+- `src/index.css`
+- `supabase/functions/chat/index.ts`
+- `supabase/functions/chat/ENHANCED_SYSTEM_PROMPT.ts`
+- `supabase/functions/system-actions/index.ts`
 
----
+## Résultat attendu
 
-## Phase 4 — Messagerie temps réel
+Après implémentation :
 
-**Tables** :
-```text
-conversations (id uuid PK, context_type enum(ride/availability/request),
-  context_id uuid, created_at)
-
-conversation_participants (id uuid PK, conversation_id → conversations,
-  user_id → auth.users, role_label text)
-
-messages (id uuid PK, conversation_id → conversations, sender_id → auth.users,
-  text, attachment_url, created_at)
-```
-
-**Realtime** : s'abonner au channel `messages` avec `supabase.channel().on('postgres_changes', ...)` pour recevoir les nouveaux messages instantanément.
-
-**Composants** : adapter `ConversationListPane` et `MessageThreadPane` pour lire/écrire via Supabase au lieu du state local. Le `sendMessage` du workflow devient un `insert` dans `messages`.
-
-**CTA Contacter** : crée une conversation dans Supabase (ou ouvre l'existante) et redirige vers `/messages`.
-
----
-
-## Phase 5 — Booking flow
-
-Le flux de réservation (`payment-booking/Page.tsx`) :
-- Crée un `booking` dans Supabase avec le `payment_method` choisi (card/wallet/paypal/cash)
-- Décrémente `seats_left` sur le trip
-- Crée une conversation automatique avec le conducteur
-- Cash : status `cash_pending`, pas de paiement en ligne
-
----
-
-## Phase 6 — Profile settings
-
-Le formulaire `ProfileSettingsForm` lit/écrit dans `profiles` via Supabase. Le changement de mot de passe utilise `supabase.auth.updateUser()`. Le logout utilise `supabase.auth.signOut()`.
-
----
-
-## Fichiers impactés (principaux)
-
-| Fichier | Action |
-|---------|--------|
-| `src/integrations/supabase/client.ts` | Nouveau — client Supabase |
-| `src/integrations/supabase/types.ts` | Nouveau — types auto-générés |
-| `src/openride/shared/auth/AuthProvider.tsx` | Nouveau — contexte auth Supabase |
-| `src/openride/shared/workflows/OpenRideWorkflowProvider.tsx` | Refactoring majeur — queries Supabase |
-| `src/openride/shared/workflows/guards.tsx` | Adapter aux sessions Supabase |
-| `src/openride/routes/auth/Page.tsx` | Auth Supabase réelle |
-| `src/openride/routes/search-results/components/MapPanel.tsx` | Carte Mapbox GL |
-| `src/openride/routes/search-results/components/RideResultsList.tsx` | Query Supabase |
-| `src/openride/routes/publish-trip/Page.tsx` | Insert Supabase |
-| `src/openride/routes/messages/components/*` | Realtime Supabase |
-| Toutes les pages | Remplacement des données seed par queries |
-
-## Approche d'implémentation
-
-Pour économiser tes crédits, je vais procéder par lots cohérents :
-1. **Lot 1** : Supabase setup + auth + migrations + gardes → l'app se connecte vraiment
-2. **Lot 2** : CRUD trajets/disponibilités/demandes/bookings → les données sont persistées  
-3. **Lot 3** : Mapbox (carte + autocomplete) → UX de recherche fonctionnelle
-4. **Lot 4** : Messagerie realtime → conversations live
-
-Chaque lot est autonome et testable indépendamment.
-
+1. Le lancement Electron ouvre un vrai bureau immersif, pas une fenêtre classique ni un overlay cassé
+2. Le fond reprend l’ambiance de la vue web actuelle
+3. Le layout desktop rappelle Big Picture : grand, propre, spatial, lisible
+4. Le bridge Windows/Desktop refonctionne proprement
+5. L’explorateur et les apps du bureau s’intègrent comme de vraies surfaces système
+6. Les erreurs TypeScript actuelles disparaissent
+7. Les erreurs côté fonctions backend sont corrigées aussi
+8. developper un system structurer pour gerer les composants et les cogWindows de notre app
+9. faire tous les tests
+10. je veux une orchestration parfaite
+11. supprime le system de metric des perfs system
+12. je ne veux plus de transparences sur les widgetsqui ont le focus
+13. l'explorateur de fichier doit avoir exactement le meme bg que la vue web actuelle
+14. notre explorateur doit pouvoir remplacer facilement l'explorateur windows natif et repondre a tous ses evenements aussi
+15. je ne veux plus que le CoInput soit visible au lancement et devra repondre a la com crtl+k
+16. et je veux un DnD sur tous les composants appropriés 
+17. pour finir optimise profondement les performances, exploite profondement les services de la .env
+18. prend tout ton temps pour tester et finaliser le projet
+19. n'hesite pas a creer de nouveaux composants
