@@ -1,184 +1,96 @@
-# Objectif
 
-Reprendre proprement toute l’intégration Windows/Desktop qui est actuellement cassée, puis faire évoluer l’app Electron d’un simple HUD de widgets vers un vrai “bureau immersif” inspiré de la vue web actuelle et du mode Big Picture de Steam.
 
-## Ce que j’ai identifié dans le code
+# Ergo Proxy — Bureau Desktop Web Premium
 
-### 1) Le mode desktop actuel est incohérent
+## Constat
 
-- `useElectronMode.ts` force `html.electron-mode body { background: transparent }`
-- `Index.tsx` bascule directement vers `DesktopWidgetShell`
-- `DesktopWidgetShell` affiche surtout des overlays flottants, pas un bureau structuré
-- `BridgeIndicator` est encore positionné en bas-droite alors que ton intention précédente était top-left
-- `electron/main.js` crée bien une fenêtre transparente, mais `alwaysOnTop` est à `false` alors que toute l’archi widgets repose sur une logique overlay/click-through
-- le résultat mélange “overlay transparent”, “pseudo desktop”, “fenêtre d’explorateur”, “shell Windows override”, donc rien n’est vraiment stabilisé
+Le répertoire `src/` est **complètement vide** — le clone n'a apporté que les fichiers de config (package.json, vite.config, tailwind, .env). Il faut créer toute l'application from scratch.
 
-### 2) Le fond du mode web n’est pas réellement repris
+## Ce que je vais construire
 
-Le web a une ambiance de fond claire dans `Index.tsx` + `index.css`, mais en Electron on annule ce fond au lieu de le réutiliser.  
-Donc le desktop Electron ne ressemble pas à la version web.
+Un **bureau desktop immersif** en web (qui sera ensuite wrappé dans Electron), inspiré Steam Big Picture / Windows 11 / macOS, avec un système d'orchestration de composants (fenêtres, widgets, dock, etc.).
 
-### 3) L’intégration Windows actuelle est trop agressive
-
-Le code de `electron/main.js` essaie déjà de rediriger l’explorateur Windows via registre + hooks shell. Vu ton message “rien ne marche”, il faut repartir sur une intégration fiabilisée :
-
-- d’abord stabiliser le bureau et le bridge Electron
-- ensuite réactiver les intégrations shell seulement si elles sont robustes
-- éviter qu’un échec shell casse le desktop entier
-
-### 4) Les erreurs de build actuelles viennent surtout de `useFileExplorer.ts`
-
-Le hook suppose que `getDrives/getNetworkMounts/getListeningServices` retournent toujours un payload enrichi, mais `useSystemBridge.ts` peut renvoyer un fallback simplifié :
-
-- `status` devient un `string`
-- `source`, `lastUpdatedAt`, `error` n’existent pas toujours
-=> c’est la cause directe des erreurs TS2322 / TS2339
-
-### 5) Il faut aussi vérifier les fonctions backend
-
-Les erreurs signalées sur :
-
-- `supabase/functions/chat/ENHANCED_SYSTEM_PROMPT.ts`
-- `supabase/functions/chat/index.ts`
-- `supabase/functions/system-actions/index.ts`
-demandent une passe de correction dédiée pour assurer que le build/lint redevienne propre.
-
-## Direction de refonte
-
-## Phase A — Stabiliser l’intégration Electron/Desktop
-
-1. Revoir `electron/main.js`
-  - remettre une configuration de fenêtre cohérente pour un vrai mode desktop
-  - décider clairement entre :
-    - mode bureau plein écran non traditionnel
-    - ou mode widgets overlay
-  - conserver le frameless + transparence seulement là où c’est utile
-  - fiabiliser `setIgnoreMouseEvents` pour qu’il ne bloque pas l’interaction
-2. Revoir `useElectronMode.ts`
-  - ne plus rendre tout le body transparent par défaut
-  - séparer :
-    - `electron-desktop-mode`
-    - `electron-widget-overlay-mode`
-  - permettre au mode desktop de garder un vrai fond visuel
-3. Revoir `Index.tsx`
-  - faire du mode Electron un “desktop shell” complet
-  - garder le fond visuel du web comme base du bureau Electron
-  - injecter les widgets/apps par-dessus dans une composition propre
-
-## Phase B — Transformer le HUD en vrai bureau type Big Picture
-
-Créer une structure desktop plus lisible et immersive :
+## Architecture
 
 ```text
-DesktopShell
-├── DesktopBackgroundLayer     ← reprend exactement l’ambiance visuelle web
-├── DesktopTopBar / status rail
-├── DesktopDock / launcher
-├── DesktopCommandBar          ← centre bas
-├── DesktopWorkspace           ← zone principale
-├── DesktopWidgetsLayer        ← cartes flottantes / bridge / status
-└── DesktopWindowsLayer        ← explorateur, apps, panneaux
+src/
+├── main.tsx                          ← entry point
+├── App.tsx                           ← router + providers
+├── index.css                         ← theme CSS variables + fond premium
+├── lib/utils.ts                      ← cn() helper
+├── desktop/
+│   ├── DesktopShell.tsx              ← layout principal du bureau
+│   ├── DesktopBackground.tsx         ← fond animé premium (gradients, orbs)
+│   ├── DesktopTopBar.tsx             ← barre status haut (heure, wifi, batterie, user)
+│   ├── DesktopDock.tsx               ← dock bas type macOS (apps lancables)
+│   ├── DesktopGrid.tsx               ← grille d'icônes/raccourcis sur le bureau
+│   ├── DesktopCommandBar.tsx         ← Ctrl+K command palette (Spotlight-like)
+│   ├── DesktopContextMenu.tsx        ← clic droit sur bureau
+│   ├── DesktopNotificationCenter.tsx ← panneau notifications
+│   └── windows/
+│       ├── WindowManager.tsx         ← orchestrateur : z-index, focus, positions
+│       ├── WindowFrame.tsx           ← fenêtre draggable/resizable avec titre
+│       ├── useWindowManager.ts       ← hook/store : open, close, minimize, maximize, focus, snap
+│       └── types.ts                  ← WindowState, WindowConfig
+├── apps/                             ← "applications" du bureau
+│   ├── FileExplorer.tsx
+│   ├── Terminal.tsx
+│   ├── Settings.tsx
+│   ├── ChatApp.tsx
+│   └── AppRegistry.ts               ← registre des apps disponibles
+├── widgets/
+│   ├── ClockWidget.tsx
+│   ├── WeatherWidget.tsx
+│   ├── SystemMonitorWidget.tsx
+│   └── QuickNotesWidget.tsx
+├── hooks/
+│   ├── useDesktopState.ts            ← état global bureau (React Context)
+│   └── useKeyboardShortcuts.ts       ← raccourcis clavier globaux
+└── components/ui/                    ← shadcn components (existants dans package.json)
 ```
 
-### UX visée
+## Fond premium
 
-- fond identique à la vue web actuelle, mais étendu à un vrai bureau
-- composition plus “salon / interface immersive” à la Steam Big Picture
-- éléments grands, lisibles, espacés, non “chat”
-- bureau principal avant les widgets
-- widgets comme modules contextuels, pas comme structure principale
+Reprise de l'ambiance décrite dans le plan : fond sombre avec des orbes lumineuses animées (bleu/violet), style glassmorphism. Identique en web et futur Electron.
 
-## Phase C — Corriger toute l’intégration Windows actuelle
+## Système d'orchestration (WindowManager)
 
-1. Assainir la logique shell/explorer dans `electron/main.js`
-  - rendre la redirection shell optionnelle et résiliente
-  - éviter que l’échec du registre ou du shell casse l’app
-  - isoler les fonctions d’intégration Windows dans un bloc plus sûr
-2. Vérifier `preload.js` + `useSystemBridge.ts`
-  - aligner exactement les méthodes exposées
-  - normaliser tous les retours du bridge
-  - garantir des payloads typés stables côté React
-3. Harmoniser `DesktopIconZone`, `FileExplorer`, `WindowFrame`
-  - les intégrer dans une logique “apps du bureau”
-  - éviter l’effet collage de composants indépendants
+- Chaque "app" s'ouvre dans une `WindowFrame` gérée par le `WindowManager`
+- Drag & drop pour déplacer les fenêtres
+- Resize par les bords
+- Minimize (dans le dock), Maximize (plein écran), Close
+- Z-index dynamique (la fenêtre focusée passe au-dessus)
+- Snap aux bords (gauche/droite = 50%)
+- État centralisé via React Context
 
-## Phase D — Corriger le build TypeScript
+## Composants du bureau
 
-### D1) `useSystemBridge.ts`
+| Composant | Description |
+|-----------|-------------|
+| DesktopBackground | Canvas/CSS avec gradient animé + orbes flottantes |
+| DesktopTopBar | Heure, date, indicateurs système, avatar user, notifications |
+| DesktopDock | Barre d'apps en bas, icônes avec tooltip, animation hover |
+| DesktopGrid | Icônes sur le bureau (double-clic ouvre l'app) |
+| DesktopCommandBar | Ctrl+K → recherche/lancement rapide |
+| DesktopContextMenu | Clic droit → options bureau |
+| WindowFrame | Fenêtre avec titlebar, drag, resize, min/max/close |
 
-Uniformiser les fallbacks de :
+## Apps incluses
 
-- `getDrives`
-- `getNetworkMounts`
-- `getListeningServices`
+- **File Explorer** : navigation dossiers (mock en web, réel en Electron)
+- **Terminal** : émulateur basique
+- **Settings** : thème, wallpaper, préférences
+- **Chat** : utilise les APIs AI du .env (Groq/OpenRouter)
 
-Ils devront retourner un objet strictement compatible avec `CacheBackedPayload<T>` :
+## Widgets
 
-- `success`
-- `data`
-- `status`
-- `source`
-- `lastUpdatedAt`
-- `error`
+Petits composants flottants sur le bureau : horloge, météo, notes rapides, moniteur système.
 
-### D2) `useFileExplorer.ts`
+## Dépendances existantes utilisées
 
-- typer explicitement les snapshots enrichis
-- éviter l’accès direct à des propriétés qui n’existent pas sur les fallbacks actuels
-- s’assurer que `ExplorerLoadStatus` reçoit uniquement les valeurs prévues
+Tout est déjà dans package.json : React, Framer Motion (animations), Radix UI (menus, dialogs), lucide-react (icônes), cmdk (command palette), react-resizable-panels.
 
-## Phase E — Corriger les erreurs dans les fonctions backend
+## Lot unique
 
-Faire une passe dédiée sur :
+Tout sera créé en un seul passage pour économiser les crédits : structure complète, fond animé, dock, topbar, window manager, 4 apps, widgets, raccourcis clavier, command bar.
 
-- `supabase/functions/chat/index.ts`
-- `supabase/functions/chat/ENHANCED_SYSTEM_PROMPT.ts`
-- `supabase/functions/system-actions/index.ts`
-
-Objectif :
-
-- corriger les éventuels problèmes de typage/lint/format
-- s’assurer que rien dans ces fonctions ne bloque le build global
-
-## Fichiers impactés
-
-- `electron/main.js`
-- `electron/preload.js`
-- `src/hooks/useElectronMode.ts`
-- `src/pages/Index.tsx`
-- `src/components/desktop/DesktopWidgetShell.tsx`
-- `src/components/desktop/BridgeIndicator.tsx`
-- `src/components/desktop/DesktopCommandBar.tsx`
-- `src/components/desktop/DesktopSidePanel.tsx`
-- `src/components/desktop/DesktopIconZone.tsx`
-- `src/components/desktop/WindowFrame.tsx`
-- `src/hooks/useSystemBridge.ts`
-- `src/hooks/useFileExplorer.ts`
-- `src/index.css`
-- `supabase/functions/chat/index.ts`
-- `supabase/functions/chat/ENHANCED_SYSTEM_PROMPT.ts`
-- `supabase/functions/system-actions/index.ts`
-
-## Résultat attendu
-
-Après implémentation :
-
-1. Le lancement Electron ouvre un vrai bureau immersif, pas une fenêtre classique ni un overlay cassé
-2. Le fond reprend l’ambiance de la vue web actuelle
-3. Le layout desktop rappelle Big Picture : grand, propre, spatial, lisible
-4. Le bridge Windows/Desktop refonctionne proprement
-5. L’explorateur et les apps du bureau s’intègrent comme de vraies surfaces système
-6. Les erreurs TypeScript actuelles disparaissent
-7. Les erreurs côté fonctions backend sont corrigées aussi
-8. developper un system structurer pour gerer les composants et les cogWindows de notre app
-9. faire tous les tests
-10. je veux une orchestration parfaite
-11. supprime le system de metric des perfs system
-12. je ne veux plus de transparences sur les widgetsqui ont le focus
-13. l'explorateur de fichier doit avoir exactement le meme bg que la vue web actuelle
-14. notre explorateur doit pouvoir remplacer facilement l'explorateur windows natif et repondre a tous ses evenements aussi
-15. je ne veux plus que le CoInput soit visible au lancement et devra repondre a la com crtl+k
-16. et je veux un DnD sur tous les composants appropriés 
-17. pour finir optimise profondement les performances, exploite profondement les services de la .env
-18. prend tout ton temps pour tester et finaliser le projet
-19. n'hesite pas a creer de nouveaux composants
