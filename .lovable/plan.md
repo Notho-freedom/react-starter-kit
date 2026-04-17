@@ -1,96 +1,106 @@
 
 
-# Ergo Proxy — Bureau Desktop Web Premium
+# Refonte cognitive du bureau — élimination des bordures parasites + composants partagés
 
-## Constat
+## Diagnostic
 
-Le répertoire `src/` est **complètement vide** — le clone n'a apporté que les fichiers de config (package.json, vite.config, tailwind, .env). Il faut créer toute l'application from scratch.
+Pas de dossier `src/components/` ni de "composants cognitifs" stockés ailleurs — ils n'existent pas en tant que fichiers. En revanche, le **design system cognitif** est défini dans `tailwind.config.ts` :
+- Tokens : `surface-{void,deep,glass,elevated}`, `intent-*`, `text-*`, `radius-cognitive`, `shadow-{glow-primary,ambient,elevated}`, easing `cognitive-enter/exit`
+- Animations : `breathe`, `glow-pulse`, `orbit`, `scan-line`, `fade-in/out`, `dissolve`
+- Spacing : `cognitive-sm/md/lg/xl`
 
-## Ce que je vais construire
+Ces tokens ne sont quasiment pas utilisés. Le bureau actuel empile cartes-dans-cartes (dock = bordure + icônes bordées ; grid = bouton bordé + icône bordée) et le fond est statique.
 
-Un **bureau desktop immersif** en web (qui sera ensuite wrappé dans Electron), inspiré Steam Big Picture / Windows 11 / macOS, avec un système d'orchestration de composants (fenêtres, widgets, dock, etc.).
+## Ce que je vais faire (lot unique)
 
-## Architecture
+### 1. Créer la bibliothèque `src/components/cognitive/` (vraies briques réutilisables)
+
+| Composant | Rôle | Anti-pattern évité |
+|---|---|---|
+| `CognitiveSurface` | Conteneur glass de base (variants: `void`, `glass`, `elevated`, `floating`) avec **zéro bordure par défaut** — séparation par ombre/luminance | bordure systématique |
+| `CognitiveCard` | Carte de réponse (le composant de référence demandé) — surface unique, pas de wrapper | bordures empilées |
+| `CognitiveWindow` | Étend `CognitiveCard` avec titlebar, drag, resize, min/max/close (remplace `WindowFrame` actuel) | titlebar séparée par bordure |
+| `CognitiveDock` | Dock sans bordure interne sur les icônes — l'élévation seule différencie hover/actif | icône bordée dans dock bordé |
+| `CognitiveIcon` | Icône applicative — au repos: pure (pas de carte), au hover: halo `glow-primary` + scale, sans bordure | double carte hover/icon |
+| `CognitiveOrb` | Orbe lumineuse animée (`breathe`, `orbit`) pour fond et accents | — |
+| `CognitiveScanline` | Ligne de scan animée (`scan-line`) overlay subtil | — |
+| `CognitivePill` | Badge/indicateur (statut, raccourci kbd) sans bordure | `<kbd>` bordé |
+| `CognitiveCommandPalette` | Palette Spotlight stylée cognitive | bordures sur input + items |
+| `CognitiveContextMenu` | Menu contextuel cognitif | — |
+
+Toutes ces briques utilisent **uniquement** les tokens cognitifs (surface/intent/shadow/easing). Règle stricte : **une seule frontière visuelle par niveau de profondeur** — soit ombre, soit luminance, jamais bordure + ombre + carte interne.
+
+### 2. Refondre le fond — animations vivantes
+
+Nouveau `DesktopBackground` :
+- Gradient mesh animé bleu/violet/cyan (mouvement lent, 30–60s)
+- 5–7 `CognitiveOrb` qui dérivent (`breathe` + translate)
+- Couche de particules légère (canvas) — points lumineux qui dérivent
+- `CognitiveScanline` horizontale très discrète (opacité 0.04)
+- Grille subtile en parallaxe douce sur mouvement souris
+- Vignette radiale pour focaliser le regard
+
+### 3. Refondre les surfaces du bureau (sans bordures parasites)
+
+- **TopBar** : surface flottante translucide, séparée du fond uniquement par `shadow-ambient` + backdrop-blur. Items = texte/icône nus, hover = halo lumineux (pas de carte).
+- **Dock** : un seul plan (`surface-glass` + `shadow-elevated`). Icônes nues au repos, agrandissement + halo au hover (pas de carte interne).
+- **DesktopGrid** : icônes nues (juste l'emoji/glyphe) + label. Hover = halo radial doux derrière l'icône, pas de carte.
+- **Window** : titlebar fondue dans la surface (pas de bordure de séparation — un dégradé subtil suffit). Boutons ronds colorés discrets façon macOS, sans carte.
+- **CommandBar** : input sans bordure, items à séparation par luminance au focus.
+
+### 4. Brancher l'existant sur les nouveaux composants
+
+- `WindowManager` utilise `CognitiveWindow` au lieu de `WindowFrame`
+- `FileExplorer`, `Terminal`, `Settings`, `ChatApp` re-stylés avec `CognitiveSurface` (suppression des cartes internes redondantes)
+- `useDesktopState` inchangé, `useWindowManager` inchangé
+
+### 5. Détails de polish
+
+- Transitions sur `cognitive-enter/exit` partout (220–360ms)
+- Ouverture de fenêtre : `fade-in` + scale doux + halo `glow-pulse` 1× au focus
+- Fermeture : `dissolve`
+- Apparition du dock : `breathe` au mount
+- Curseur custom subtil sur le bureau
+
+## Arborescence finale
 
 ```text
 src/
-├── main.tsx                          ← entry point
-├── App.tsx                           ← router + providers
-├── index.css                         ← theme CSS variables + fond premium
-├── lib/utils.ts                      ← cn() helper
+├── components/cognitive/
+│   ├── CognitiveSurface.tsx
+│   ├── CognitiveCard.tsx
+│   ├── CognitiveWindow.tsx       (← remplace desktop/windows/WindowFrame)
+│   ├── CognitiveDock.tsx
+│   ├── CognitiveIcon.tsx
+│   ├── CognitiveOrb.tsx
+│   ├── CognitiveScanline.tsx
+│   ├── CognitivePill.tsx
+│   ├── CognitiveCommandPalette.tsx
+│   ├── CognitiveContextMenu.tsx
+│   └── index.ts
 ├── desktop/
-│   ├── DesktopShell.tsx              ← layout principal du bureau
-│   ├── DesktopBackground.tsx         ← fond animé premium (gradients, orbs)
-│   ├── DesktopTopBar.tsx             ← barre status haut (heure, wifi, batterie, user)
-│   ├── DesktopDock.tsx               ← dock bas type macOS (apps lancables)
-│   ├── DesktopGrid.tsx               ← grille d'icônes/raccourcis sur le bureau
-│   ├── DesktopCommandBar.tsx         ← Ctrl+K command palette (Spotlight-like)
-│   ├── DesktopContextMenu.tsx        ← clic droit sur bureau
-│   ├── DesktopNotificationCenter.tsx ← panneau notifications
+│   ├── DesktopShell.tsx          (refondu)
+│   ├── DesktopBackground.tsx     (refondu — mesh + particules + orbs)
+│   ├── DesktopTopBar.tsx         (refondu, sans bordures)
+│   ├── DesktopDock.tsx           (utilise CognitiveDock)
+│   ├── DesktopGrid.tsx           (utilise CognitiveIcon)
+│   ├── DesktopCommandBar.tsx     (utilise CognitiveCommandPalette)
+│   ├── DesktopContextMenu.tsx    (utilise CognitiveContextMenu)
 │   └── windows/
-│       ├── WindowManager.tsx         ← orchestrateur : z-index, focus, positions
-│       ├── WindowFrame.tsx           ← fenêtre draggable/resizable avec titre
-│       ├── useWindowManager.ts       ← hook/store : open, close, minimize, maximize, focus, snap
-│       └── types.ts                  ← WindowState, WindowConfig
-├── apps/                             ← "applications" du bureau
-│   ├── FileExplorer.tsx
-│   ├── Terminal.tsx
-│   ├── Settings.tsx
-│   ├── ChatApp.tsx
-│   └── AppRegistry.ts               ← registre des apps disponibles
-├── widgets/
-│   ├── ClockWidget.tsx
-│   ├── WeatherWidget.tsx
-│   ├── SystemMonitorWidget.tsx
-│   └── QuickNotesWidget.tsx
-├── hooks/
-│   ├── useDesktopState.ts            ← état global bureau (React Context)
-│   └── useKeyboardShortcuts.ts       ← raccourcis clavier globaux
-└── components/ui/                    ← shadcn components (existants dans package.json)
+│       ├── WindowManager.tsx     (utilise CognitiveWindow)
+│       ├── useWindowManager.ts   (inchangé)
+│       └── types.ts              (inchangé)
+└── apps/                          (re-stylées sans cartes internes)
 ```
 
-## Fond premium
+## Règles strictes appliquées partout
 
-Reprise de l'ambiance décrite dans le plan : fond sombre avec des orbes lumineuses animées (bleu/violet), style glassmorphism. Identique en web et futur Electron.
-
-## Système d'orchestration (WindowManager)
-
-- Chaque "app" s'ouvre dans une `WindowFrame` gérée par le `WindowManager`
-- Drag & drop pour déplacer les fenêtres
-- Resize par les bords
-- Minimize (dans le dock), Maximize (plein écran), Close
-- Z-index dynamique (la fenêtre focusée passe au-dessus)
-- Snap aux bords (gauche/droite = 50%)
-- État centralisé via React Context
-
-## Composants du bureau
-
-| Composant | Description |
-|-----------|-------------|
-| DesktopBackground | Canvas/CSS avec gradient animé + orbes flottantes |
-| DesktopTopBar | Heure, date, indicateurs système, avatar user, notifications |
-| DesktopDock | Barre d'apps en bas, icônes avec tooltip, animation hover |
-| DesktopGrid | Icônes sur le bureau (double-clic ouvre l'app) |
-| DesktopCommandBar | Ctrl+K → recherche/lancement rapide |
-| DesktopContextMenu | Clic droit → options bureau |
-| WindowFrame | Fenêtre avec titlebar, drag, resize, min/max/close |
-
-## Apps incluses
-
-- **File Explorer** : navigation dossiers (mock en web, réel en Electron)
-- **Terminal** : émulateur basique
-- **Settings** : thème, wallpaper, préférences
-- **Chat** : utilise les APIs AI du .env (Groq/OpenRouter)
-
-## Widgets
-
-Petits composants flottants sur le bureau : horloge, météo, notes rapides, moniteur système.
-
-## Dépendances existantes utilisées
-
-Tout est déjà dans package.json : React, Framer Motion (animations), Radix UI (menus, dialogs), lucide-react (icônes), cmdk (command palette), react-resizable-panels.
+1. **Jamais de bordure visible sauf pour un focus actif explicite.** Séparation = surface + ombre + backdrop-blur.
+2. **Jamais d'icône dans une carte dans un dock dans une carte.** Maximum 1 niveau de surface autour d'un contenu interactif.
+3. **Hover** = halo lumineux (glow), élévation, ou scale — **jamais** ajout de bordure ou de fond plein.
+4. **Transitions cognitives uniquement** (`cognitive-enter/exit`, durées du token).
 
 ## Lot unique
 
-Tout sera créé en un seul passage pour économiser les crédits : structure complète, fond animé, dock, topbar, window manager, 4 apps, widgets, raccourcis clavier, command bar.
+Tout en une passe pour tenir sur les crédits restants : 10 composants cognitifs + refonte du fond + refactor des 6 fichiers desktop + restyle des 4 apps.
 
