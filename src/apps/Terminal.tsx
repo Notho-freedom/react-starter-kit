@@ -17,7 +17,7 @@ const COMMANDS: Record<string, (args: string[]) => string> = {
   cat: (args) => args.length ? `cat: ${args[0]}: fichier fictif (mode web)` : "cat: argument manquant",
 };
 
-export function Terminal({ windowId }: { windowId: string }) {
+export function Terminal({ }: { windowId: string }) {
   const [lines, setLines] = useState<Line[]>([
     { id: 0, type: "output", text: "ErgoProxy Terminal v1.0" },
     { id: 1, type: "output", text: 'Tapez "help" pour voir les commandes disponibles.\n' },
@@ -27,7 +27,7 @@ export function Terminal({ windowId }: { windowId: string }) {
   const [histIdx, setHistIdx] = useState(-1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  let nextId = useRef(2);
+  const nextId = useRef(2);
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
@@ -76,10 +76,18 @@ export function Terminal({ windowId }: { windowId: string }) {
 
   return (
     <div
-      className="flex flex-col h-full bg-[hsl(222,47%,3%)] font-mono text-sm cursor-text"
+      className="flex flex-col h-full font-mono text-sm cursor-text relative"
+      style={{ background: "hsl(var(--surface-void))" }}
       onClick={() => inputRef.current?.focus()}
     >
-      <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-0.5">
+      {/* Subtle scan effect inside terminal */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage: "repeating-linear-gradient(0deg, hsl(var(--intent-success)) 0px, hsl(var(--intent-success)) 1px, transparent 1px, transparent 3px)",
+        }}
+      />
+      <div ref={scrollRef} className="relative flex-1 overflow-auto p-3 space-y-0.5">
         {lines.map(l => (
           <div key={l.id} className={l.type === "input" ? "text-intent-success" : "text-text-secondary"}>
             {l.text}
@@ -92,7 +100,7 @@ export function Terminal({ windowId }: { windowId: string }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            className="flex-1 bg-transparent outline-none text-foreground caret-primary"
+            className="flex-1 bg-transparent outline-none text-text-primary caret-intent-primary"
             autoFocus
             spellCheck={false}
           />

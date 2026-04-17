@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -7,7 +8,7 @@ interface Message {
   content: string;
 }
 
-export function ChatApp({ windowId }: { windowId: string }) {
+export function ChatApp({ }: { windowId: string }) {
   const [messages, setMessages] = useState<Message[]>([
     { id: "init", role: "assistant", content: "Bonjour ! Je suis l'assistant Ergo Proxy. Comment puis-je vous aider ?" },
   ]);
@@ -17,7 +18,7 @@ export function ChatApp({ windowId }: { windowId: string }) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
-  }, [messages]);
+  }, [messages, loading]);
 
   const send = async () => {
     const text = input.trim();
@@ -28,7 +29,6 @@ export function ChatApp({ windowId }: { windowId: string }) {
     setInput("");
     setLoading(true);
 
-    // Simulated AI response (would use Groq/OpenRouter in production)
     await new Promise(r => setTimeout(r, 800 + Math.random() * 1200));
 
     const responses = [
@@ -49,56 +49,77 @@ export function ChatApp({ windowId }: { windowId: string }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface-deep">
-      {/* Messages */}
+    <div className="flex flex-col h-full">
+      {/* Messages — bubbles use single surface, no border */}
       <div ref={scrollRef} className="flex-1 overflow-auto p-4 space-y-3">
         {messages.map(msg => (
-          <div key={msg.id} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0
-              ${msg.role === "assistant" ? "bg-primary/20 text-primary" : "bg-surface-glass text-text-secondary"}`}>
+          <div key={msg.id} className={cn("flex gap-2.5 items-start", msg.role === "user" && "flex-row-reverse")}>
+            <div
+              className={cn(
+                "w-7 h-7 rounded-lg grid place-items-center shrink-0",
+                msg.role === "assistant" ? "bg-intent-primary/15 text-intent-primary-glow" : "bg-surface-glass/60 text-text-secondary",
+              )}
+              style={msg.role === "assistant"
+                ? { boxShadow: "0 0 12px -4px hsl(var(--intent-primary) / 0.5)" }
+                : undefined}
+            >
               {msg.role === "assistant" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
             </div>
-            <div className={`max-w-[75%] px-3 py-2 rounded-xl text-xs leading-relaxed
-              ${msg.role === "assistant"
-                ? "bg-surface-glass/60 text-foreground border border-border/20"
-                : "bg-primary/20 text-foreground"}`}
+            <div
+              className={cn(
+                "max-w-[75%] px-3 py-2 rounded-2xl text-xs leading-relaxed",
+                msg.role === "assistant"
+                  ? "bg-surface-glass/50 text-text-primary rounded-tl-sm"
+                  : "text-text-primary rounded-tr-sm",
+              )}
+              style={msg.role === "user"
+                ? { background: "linear-gradient(135deg, hsl(var(--intent-primary) / 0.25), hsl(var(--intent-secondary) / 0.18))" }
+                : undefined}
             >
               {msg.content}
             </div>
           </div>
         ))}
         {loading && (
-          <div className="flex gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+          <div className="flex gap-2.5 items-start">
+            <div
+              className="w-7 h-7 rounded-lg bg-intent-primary/15 text-intent-primary-glow grid place-items-center"
+              style={{ boxShadow: "0 0 12px -4px hsl(var(--intent-primary) / 0.5)" }}
+            >
               <Bot className="w-4 h-4" />
             </div>
-            <div className="bg-surface-glass/60 border border-border/20 rounded-xl px-3 py-2">
+            <div className="bg-surface-glass/50 rounded-2xl rounded-tl-sm px-3 py-2.5">
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-text-muted rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 bg-text-muted rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 bg-text-muted rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <span className="w-1.5 h-1.5 bg-intent-primary-glow rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 bg-intent-primary-glow rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 bg-intent-primary-glow rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Input */}
-      <div className="p-3 border-t border-border/30 bg-surface-void/30">
-        <div className="flex gap-2">
+      {/* Input — fused into surface, halo on focus instead of border */}
+      <div
+        className="p-3"
+        style={{ background: "linear-gradient(0deg, hsl(var(--surface-void) / 0.5), transparent)" }}
+      >
+        <div className="flex gap-2 items-center bg-surface-glass/40 hover:bg-surface-glass/55 focus-within:bg-surface-glass/60 transition-colors rounded-xl px-3 py-1.5"
+          style={{ boxShadow: "inset 0 0 0 1px hsl(var(--text-primary) / 0.04)" }}
+        >
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && send()}
             placeholder="Écrivez votre message…"
-            className="flex-1 bg-surface-glass/50 border border-border/30 rounded-lg px-3 py-2 text-xs
-              text-foreground placeholder:text-text-ghost outline-none focus:border-primary/50 transition-colors"
+            className="flex-1 bg-transparent text-xs text-text-primary placeholder:text-text-ghost outline-none py-1.5"
           />
           <button
             onClick={send}
             disabled={loading || !input.trim()}
-            className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center
-              hover:bg-primary/30 disabled:opacity-30 transition-colors"
+            className="w-7 h-7 rounded-lg bg-intent-primary/20 text-intent-primary-glow grid place-items-center
+              hover:bg-intent-primary/35 disabled:opacity-30 transition-all duration-micro
+              hover:shadow-glow-primary disabled:shadow-none"
           >
             <Send className="w-3.5 h-3.5" />
           </button>

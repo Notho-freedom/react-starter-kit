@@ -48,33 +48,40 @@ function resolvePath(root: FsNode, path: string[]): FsNode | null {
   return current;
 }
 
-export function FileExplorer({ windowId }: { windowId: string }) {
+export function FileExplorer({ }: { windowId: string }) {
   const [pathStack, setPathStack] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
   const current = resolvePath(mockFs, pathStack);
   const items = current?.children ?? [];
 
-  const navigate = (name: string) => setPathStack(prev => [...prev, name]);
-  const goBack = () => setPathStack(prev => prev.slice(0, -1));
-  const goHome = () => setPathStack([]);
+  const navigate = (name: string) => { setPathStack(prev => [...prev, name]); setSelected(null); };
+  const goBack = () => { setPathStack(prev => prev.slice(0, -1)); setSelected(null); };
+  const goHome = () => { setPathStack([]); setSelected(null); };
 
   return (
-    <div className="flex flex-col h-full bg-surface-deep text-foreground">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/30 bg-surface-void/50">
-        <button onClick={goBack} disabled={pathStack.length === 0}
-          className="p-1 rounded hover:bg-surface-glass disabled:opacity-30 transition-colors">
+    <div className="flex flex-col h-full text-text-primary">
+      {/* Toolbar — no border, separated by luminance */}
+      <div
+        className="flex items-center gap-2 px-3 py-2"
+        style={{ background: "linear-gradient(180deg, hsl(var(--surface-void) / 0.4), transparent)" }}
+      >
+        <button
+          onClick={goBack}
+          disabled={pathStack.length === 0}
+          className="p-1.5 rounded-md hover:bg-surface-glass/60 disabled:opacity-30 transition-colors duration-micro"
+        >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <button onClick={goHome} className="p-1 rounded hover:bg-surface-glass transition-colors">
+        <button onClick={goHome} className="p-1.5 rounded-md hover:bg-surface-glass/60 transition-colors duration-micro">
           <Home className="w-4 h-4" />
         </button>
-        <div className="flex items-center gap-1 text-xs text-text-secondary flex-1 bg-surface-glass/50 rounded-lg px-2 py-1">
-          <HardDrive className="w-3 h-3" />
-          <span>{mockFs.name}</span>
+        <div className="flex items-center gap-1 text-xs text-text-secondary flex-1 bg-surface-glass/30 hover:bg-surface-glass/50 transition-colors rounded-lg px-2.5 py-1.5">
+          <HardDrive className="w-3 h-3 text-text-muted" />
+          <span className="font-medium">{mockFs.name}</span>
           {pathStack.map((p, i) => (
             <span key={i} className="flex items-center gap-1">
               <ChevronRight className="w-3 h-3 text-text-ghost" />
-              <button onClick={() => setPathStack(pathStack.slice(0, i + 1))} className="hover:text-foreground transition-colors">
+              <button onClick={() => setPathStack(pathStack.slice(0, i + 1))} className="hover:text-text-primary transition-colors">
                 {p}
               </button>
             </span>
@@ -82,49 +89,59 @@ export function FileExplorer({ windowId }: { windowId: string }) {
         </div>
       </div>
 
-      {/* File list */}
-      <div className="flex-1 overflow-auto p-2">
+      {/* File list — rows separated only by hover state */}
+      <div className="flex-1 overflow-auto px-2 pb-2">
         {items.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-text-muted text-sm">
-            Dossier vide
+          <div className="flex flex-col items-center justify-center h-full text-text-muted text-sm gap-2">
+            <Folder className="w-10 h-10 text-text-ghost" />
+            <p>Dossier vide</p>
           </div>
         ) : (
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-text-muted border-b border-border/20">
-                <th className="text-left py-1.5 px-2 font-medium">Nom</th>
-                <th className="text-left py-1.5 px-2 font-medium w-24">Taille</th>
-                <th className="text-left py-1.5 px-2 font-medium w-32">Modifié</th>
+              <tr className="text-text-ghost">
+                <th className="text-left py-2 px-3 font-medium uppercase tracking-wider text-[10px]">Nom</th>
+                <th className="text-left py-2 px-3 font-medium uppercase tracking-wider text-[10px] w-24">Taille</th>
+                <th className="text-left py-2 px-3 font-medium uppercase tracking-wider text-[10px] w-32">Modifié</th>
               </tr>
             </thead>
             <tbody>
               {items.sort((a, b) => {
                 if (a.type === b.type) return a.name.localeCompare(b.name);
                 return a.type === "folder" ? -1 : 1;
-              }).map(item => (
-                <tr
-                  key={item.name}
-                  onDoubleClick={() => item.type === "folder" && navigate(item.name)}
-                  className="hover:bg-surface-glass/50 cursor-default rounded transition-colors"
-                >
-                  <td className="py-1.5 px-2 flex items-center gap-2">
-                    {item.type === "folder"
-                      ? <Folder className="w-4 h-4 text-intent-primary" />
-                      : <File className="w-4 h-4 text-text-muted" />}
-                    <span className="text-foreground">{item.name}</span>
-                  </td>
-                  <td className="py-1.5 px-2 text-text-muted">{item.size ?? "—"}</td>
-                  <td className="py-1.5 px-2 text-text-muted">{item.modified ?? "—"}</td>
-                </tr>
-              ))}
+              }).map(item => {
+                const isSelected = selected === item.name;
+                return (
+                  <tr
+                    key={item.name}
+                    onClick={() => setSelected(item.name)}
+                    onDoubleClick={() => item.type === "folder" && navigate(item.name)}
+                    className={`cursor-default rounded-lg transition-colors duration-micro ${
+                      isSelected ? "bg-intent-primary/15" : "hover:bg-surface-glass/40"
+                    }`}
+                  >
+                    <td className="py-2 px-3 flex items-center gap-2.5 rounded-l-lg">
+                      {item.type === "folder"
+                        ? <Folder className="w-4 h-4 text-intent-primary-glow" />
+                        : <File className="w-4 h-4 text-text-muted" />}
+                      <span className="text-text-primary">{item.name}</span>
+                    </td>
+                    <td className="py-2 px-3 text-text-muted">{item.size ?? "—"}</td>
+                    <td className="py-2 px-3 text-text-muted rounded-r-lg">{item.modified ?? "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* Status bar */}
-      <div className="px-3 py-1.5 border-t border-border/30 text-[10px] text-text-ghost bg-surface-void/30">
-        {items.length} éléments
+      {/* Status bar — luminance separation only */}
+      <div
+        className="px-3 py-1.5 text-[10px] text-text-ghost"
+        style={{ background: "linear-gradient(0deg, hsl(var(--surface-void) / 0.4), transparent)" }}
+      >
+        {items.length} élément{items.length > 1 ? "s" : ""}
       </div>
     </div>
   );
