@@ -1,73 +1,129 @@
-# Welcome to your Lovable project
+# Desktop Workspace Prototype
 
-## Project info
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
+![Electron](https://img.shields.io/badge/Electron-desktop-47848F?logo=electron&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-tests-6E9F18?logo=vitest&logoColor=white)
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+This repository is no longer accurately described by the default Lovable starter README. The current codebase is a **desktop workspace prototype** built with React and Vite, with an Electron companion and a window-management-oriented UI.
 
-## How can I edit this code?
+## What is implemented
 
-There are several ways of editing your application.
+The current React application renders a desktop-style shell with:
 
-**Use Lovable**
+- Desktop background and top bar
+- Dock
+- Application grid
+- Command bar
+- Context menu
+- Window manager
+- Keyboard shortcuts
+- Centralized desktop state
+- Dark toast notifications
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+The project also contains AI/service integrations in its dependency graph, including OpenAI, Groq and Google authentication libraries, but this README does not claim specific user-facing AI features without corresponding verified UI behavior.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Architecture
 
-**Use your preferred IDE**
+```text
+React renderer
+    │
+    ├── DesktopStateProvider
+    │
+    └── DesktopShell
+          ├── DesktopBackground
+          ├── DesktopTopBar
+          ├── DesktopGrid
+          ├── WindowManager
+          ├── DesktopDock
+          ├── DesktopCommandBar
+          └── DesktopContextMenu
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Electron companion
+    └── electron/
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Tech stack
 
-Follow these steps:
+- **React 18**
+- **TypeScript 5**
+- **Vite 5**
+- **Tailwind CSS 3**
+- **Radix UI / shadcn-style components**
+- **Framer Motion**
+- **Supabase client**
+- **OpenAI SDK**
+- **Groq SDK**
+- **systeminformation** for system-oriented capabilities
+- **Vitest + Testing Library**
+- **Electron** for desktop integration
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Development
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Requirements
 
-# Step 3: Install the necessary dependencies.
-npm i
+- Node.js
+- npm
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Install
+
+```bash
+npm install
+```
+
+### Run the web application
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Build
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run build
+```
 
-**Use GitHub Codespaces**
+### Lint
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+npm run lint
+```
 
-## What technologies are used for this project?
+### Tests
 
-This project is built with:
+```bash
+npm run test
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Desktop development
 
-## How can I deploy this project?
+The repository includes dedicated desktop scripts:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```bash
+npm run dev:desktop
+npm run electron
+```
 
-## Can I connect a custom domain to my Lovable project?
+The exact Electron packaging/runtime behavior should be checked against the `electron/` project before treating this as a production desktop application.
 
-Yes, you can!
+## Project structure
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```text
+src/
+├── desktop/       # Desktop shell and window management
+├── hooks/         # Desktop/application state and shortcuts
+├── components/    # Shared UI
+└── ...
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+electron/          # Electron-side application code
+scripts/            # Desktop development helpers
+```
+
+## Status
+
+This is an experimental desktop-workspace codebase. The UI shell is substantially beyond a generic starter template, but the repository should still be treated as a prototype unless its Electron packaging and backend integrations have been validated for production use.
+
+## License
+
+No explicit license file was identified in the current repository. Treat the project as **all rights reserved** unless a license is added.
